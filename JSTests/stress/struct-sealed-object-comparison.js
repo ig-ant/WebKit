@@ -1,3 +1,4 @@
+//@ skip if !$structsEnabled
 //@ requireOptions("--useStructs=1")
 
 // A struct instance behaves like a sealed ordinary object with the same properties, except that
