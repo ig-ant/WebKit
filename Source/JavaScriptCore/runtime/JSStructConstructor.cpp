@@ -51,6 +51,8 @@ JSStructConstructor::JSStructConstructor(VM& vm, FunctionExecutable* executable,
 
 JSStructConstructor* JSStructConstructor::create(VM& vm, JSGlobalObject* globalObject, JSFunction* templateFunction, JSStructConstructor* parent, JSFunction* initializer)
 {
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
     FunctionExecutable* executable = templateFunction->jsExecutable();
     Structure* structure = parent ? createStructure(vm, globalObject, parent) : globalObject->structConstructorStructure();
     auto* constructor = new (NotNull, allocateCell<JSStructConstructor>(vm)) JSStructConstructor(vm, executable, templateFunction->scope(), structure, parent, initializer);
@@ -59,8 +61,10 @@ JSStructConstructor* JSStructConstructor::create(VM& vm, JSGlobalObject* globalO
     executable->singleton().replaceUnobservedValue(vm, executable, templateFunction, constructor);
 
     constructor->reifyLazyPropertyIfNeeded(vm, globalObject, vm.propertyNames->length);
+    RETURN_IF_EXCEPTION(scope, nullptr);
     constructor->putDirect(vm, vm.propertyNames->length, jsNumber(0), PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly);
     constructor->reifyLazyPropertyIfNeeded(vm, globalObject, vm.propertyNames->name);
+    RETURN_IF_EXCEPTION(scope, nullptr);
     return constructor;
 }
 
@@ -207,7 +211,7 @@ JSC_DEFINE_HOST_FUNCTION(structCreateConstructor, (JSGlobalObject* globalObject,
         }
     }
 
-    return JSValue::encode(JSStructConstructor::create(vm, globalObject, templateFunction, parent, initializer));
+    RELEASE_AND_RETURN(scope, JSValue::encode(JSStructConstructor::create(vm, globalObject, templateFunction, parent, initializer)));
 }
 
 JSC_DEFINE_HOST_FUNCTION(structSuperInitializer, (JSGlobalObject*, CallFrame* callFrame))
