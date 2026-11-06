@@ -8520,6 +8520,7 @@ void ByteCodeParser::parseBlock(unsigned limit)
             NEXT_OPCODE(op_create_this);
         }
 
+#if ENABLE(JS_STRUCTS)
         case op_create_struct: {
             auto bytecode = currentInstruction->as<OpCreateStruct>();
             Node* callee = get(VirtualRegister(bytecode.m_callee));
@@ -8551,6 +8552,7 @@ void ByteCodeParser::parseBlock(unsigned limit)
                 set(VirtualRegister(bytecode.m_dst), addToGraph(CreateStruct, callee));
             NEXT_OPCODE(op_create_struct);
         }
+#endif
 
         case op_create_promise: {
             JSGlobalObject* globalObject = m_graph.globalObjectFor(currentNodeOrigin().semantic);

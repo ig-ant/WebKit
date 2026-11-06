@@ -1384,6 +1384,7 @@ RegisterID* EvalFunctionCallNode::emitBytecode(BytecodeGenerator& generator, Reg
 
 RegisterID* FunctionCallValueNode::emitBytecode(BytecodeGenerator& generator, RegisterID* dst)
 {
+#if ENABLE(JS_STRUCTS)
     if (m_expr->isSuperNode() && generator.isInStructConstructor()) {
         if (generator.isDerivedConstructorContext())
             generator.emitLoadThisFromArrowFunctionLexicalEnvironment();
@@ -1396,6 +1397,7 @@ RegisterID* FunctionCallValueNode::emitBytecode(BytecodeGenerator& generator, Re
         generator.move(callArguments.thisRegister(), generator.thisRegister());
         return generator.emitCall(returnValue.get(), func.get(), NoExpectedFunction, callArguments, divot(), divotStart(), divotEnd(), DebuggableCall::Yes);
     }
+#endif
 
     if (m_expr->isSuperNode()) {
         RefPtr<RegisterID> func = emitGetSuperFunctionForConstruct(generator);
@@ -5347,6 +5349,7 @@ void FunctionNode::emitBytecode(BytecodeGenerator& generator, RegisterID*)
     generator.emitProfileControlFlow(startStartOffset());
     generator.emitDebugHook(DidEnterCallFrame, JSTextPosition(startStartOffset()));
 
+#if ENABLE(JS_STRUCTS)
     if (generator.privateBrandRequirement() == PrivateBrandRequirement::StructFieldInitializer && generator.isDerivedClassContext()) {
         RegisterID callee;
         callee.setIndex(CallFrameSlot::callee);
@@ -5358,6 +5361,7 @@ void FunctionNode::emitBytecode(BytecodeGenerator& generator, RegisterID*)
         generator.emitCallIgnoreResult(generator.newTemporary(), parentInitializer.get(), NoExpectedFunction, args, position(), position(), position(), DebuggableCall::No);
         generator.emitLabel(noParentInitializer.get());
     }
+#endif
 
     switch (generator.parseMode()) {
     case SourceParseMode::GeneratorWrapperFunctionMode:
@@ -5750,7 +5754,7 @@ void DefineFieldNode::emitBytecode(BytecodeGenerator& generator, RegisterID*)
             generator.emitSetFunctionName(value.get(), m_ident);
     }
 
-    bool isStructField = generator.privateBrandRequirement() == PrivateBrandRequirement::StructFieldInitializer;
+    bool isStructField = isStructFieldInitializer(generator.privateBrandRequirement());
 
     switch (m_type) {
     case DefineFieldNode::Type::Name: {
@@ -5830,8 +5834,10 @@ RegisterID* ClassExprNode::emitBytecode(BytecodeGenerator& generator, RegisterID
     if (m_needsLexicalScope)
         generator.pushLexicalScope(this, BytecodeGenerator::ScopeType::ClassScope, BytecodeGenerator::TDZCheckOptimization::Optimize, BytecodeGenerator::NestedScopeType::IsNested);
 
+#if ENABLE(JS_STRUCTS)
     if (m_isStruct)
         return emitStructBytecode(generator, dst, superclass.get());
+#endif
 
     bool hasPrivateNames = !!m_lexicalVariables.privateNamesSize();
     bool shouldEmitPrivateBrand = m_lexicalVariables.hasInstancePrivateMethodOrAccessor();
@@ -5940,6 +5946,7 @@ RegisterID* ClassExprNode::emitBytecode(BytecodeGenerator& generator, RegisterID
     return generator.move(generator.finalDestination(dst, constructor.get()), constructor.get());
 }
 
+#if ENABLE(JS_STRUCTS)
 // https://tc39.es/proposal-structs/#sec-structdefinitionevaluation
 RegisterID* ClassExprNode::emitStructBytecode(BytecodeGenerator& generator, RegisterID* dst, RegisterID* superclass)
 {
@@ -6087,6 +6094,7 @@ RegisterID* ClassExprNode::emitStructBytecode(BytecodeGenerator& generator, Regi
 
     return generator.move(generator.finalDestination(dst, constructor.get()), constructor.get());
 }
+#endif
 
 // ------------------------------ ImportDeclarationNode -----------------------
 

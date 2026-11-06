@@ -1,3 +1,4 @@
+//@ skip if !$structsEnabled
 //@ requireOptions("--useStructs=1")
 struct Base { a = 1; b; constructor(b) { this.b = b; } }
 struct Derived extends Base { c = 2; d; constructor(b, d) { super(b); this.d = d; } sum() { return this.a + this.b + this.c + this.d; } }

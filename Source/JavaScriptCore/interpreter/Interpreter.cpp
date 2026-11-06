@@ -210,7 +210,7 @@ JSValue eval(CallFrame* callFrame, JSValue thisValue, JSScope* callerScopeChain,
 
         DerivedContextType derivedContextType = callerUnlinkedCodeBlock->derivedContextType();
         if (!isArrowFunctionContext && callerUnlinkedCodeBlock->isClassContext()) {
-            derivedContextType = callerUnlinkedCodeBlock->isConstructor() || callerUnlinkedCodeBlock->privateBrandRequirement() == PrivateBrandRequirement::StructInitializer
+            derivedContextType = callerUnlinkedCodeBlock->isConstructor() || isStructInitializer(callerUnlinkedCodeBlock->privateBrandRequirement())
                 ? DerivedContextType::DerivedConstructorContext
                 : DerivedContextType::DerivedMethodContext;
         }

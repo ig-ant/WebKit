@@ -2346,7 +2346,7 @@ NODELETE static ALWAYS_INLINE SuperBinding adjustSuperBindingForBaseConstructor(
             return SuperBinding::Needed;
     }
 
-    if (constructorKind == ConstructorKind::None || constructorKind == ConstructorKind::Base || constructorKind == ConstructorKind::StructBase) {
+    if (constructorKind == ConstructorKind::None || isBaseConstructorKind(constructorKind)) {
         bool isSuperUsedInInnerArrowFunction = innerArrowFunctionFeatures & SuperPropertyInnerArrowFunctionFeature;
         return (scopeNeedsSuperBinding || isSuperUsedInInnerArrowFunction || currentScopeUsesEval) ? SuperBinding::Needed : SuperBinding::NotNeeded;
     }
@@ -3022,6 +3022,7 @@ template <class TreeBuilder> TreeStatement Parser<LexerType>::parseAsyncFunction
     return result;
 }
 
+#if ENABLE(JS_STRUCTS)
 // https://tc39.es/proposal-structs/
 template <typename LexerType>
 template <class TreeBuilder> bool Parser<LexerType>::isStartOfStructDeclaration(TreeBuilder& context, DeclarationDefaultContext declarationDefaultContext)
@@ -3038,6 +3039,7 @@ template <class TreeBuilder> bool Parser<LexerType>::isStartOfStructDeclaration(
     restoreSavePoint(context, savePoint);
     return result;
 }
+#endif
 
 template <typename LexerType>
 template <class TreeBuilder> TreeStatement Parser<LexerType>::parseClassDeclaration(TreeBuilder& context, ExportType exportType, DeclarationDefaultContext declarationDefaultContext)
@@ -3047,7 +3049,9 @@ template <class TreeBuilder> TreeStatement Parser<LexerType>::parseClassDeclarat
     JSTextPosition classStart = tokenStartPosition();
 
     ParserClassInfo<TreeBuilder> info;
+#if ENABLE(JS_STRUCTS)
     info.isStruct = !match(CLASSTOKEN);
+#endif
     FunctionNameRequirements requirements = FunctionNameRequirements::Named;
     if (declarationDefaultContext == DeclarationDefaultContext::ExportDefault) {
         // Under the "export default" context, class declaration does not require the class name.
@@ -3136,11 +3140,11 @@ template <class TreeBuilder> TreeClassExpression Parser<LexerType>::parseClass(T
         parentClass = parseMemberExpression(context);
         failIfFalse(parentClass, "Cannot parse the parent class name");
     }
-    ConstructorKind constructorKind;
+    ConstructorKind constructorKind = parentClass ? ConstructorKind::Extends : ConstructorKind::Base;
+#if ENABLE(JS_STRUCTS)
     if (info.isStruct)
         constructorKind = parentClass ? ConstructorKind::StructExtends : ConstructorKind::StructBase;
-    else
-        constructorKind = parentClass ? ConstructorKind::Extends : ConstructorKind::Base;
+#endif
 
     JSTextPosition classHeadEnd = lastTokenEndPosition();
     consumeOrFail(OPENBRACE, "Expected opening '{' at the start of a class body");
@@ -3405,8 +3409,10 @@ parseMethod:
         declareHiddenVariable(m_vm.propertyNames->builtinNames().privateClassBrandPrivateName());
     }
 
+#if ENABLE(JS_STRUCTS)
     if (info.isStruct)
         declareHiddenVariable(m_vm.propertyNames->builtinNames().structSuperInitializerPrivateName());
+#endif
 
     if constexpr (std::is_same_v<TreeBuilder, ASTBuilder>) {
         if (classElements)
@@ -5691,7 +5697,7 @@ template <class TreeBuilder> TreeExpression Parser<LexerType>::parseMemberExpres
                         // inside of the constructor or method.
                         if (!m_lexer->isReparsingFunction()) {
                             Scope* closestOrdinaryFunctionScope = closestParentOrdinaryFunctionNonLexicalScope();
-                            semanticFailIfFalse(closestOrdinaryFunctionScope->constructorKind() == ConstructorKind::Extends || closestOrdinaryFunctionScope->constructorKind() == ConstructorKind::StructExtends || (closestOrdinaryFunctionScope->isEvalContext() && closestOrdinaryFunctionScope->derivedContextType() == DerivedContextType::DerivedConstructorContext), "super is not valid in this context");
+                            semanticFailIfFalse(isDerivedConstructorKind(closestOrdinaryFunctionScope->constructorKind()) || (closestOrdinaryFunctionScope->isEvalContext() && closestOrdinaryFunctionScope->derivedContextType() == DerivedContextType::DerivedConstructorContext), "super is not valid in this context");
                         }
                         if (currentScope()->isArrowFunction())
                             functionScope->setInnerArrowFunctionUsesSuperCall();

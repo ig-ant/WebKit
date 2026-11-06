@@ -335,6 +335,10 @@
 #define ENABLE_INSPECTOR_TELEMETRY 0
 #endif
 
+#if !defined(ENABLE_JS_STRUCTS)
+#define ENABLE_JS_STRUCTS 0
+#endif
+
 #if !defined(ENABLE_KINETIC_SCROLLING)
 #define ENABLE_KINETIC_SCROLLING 0
 #endif

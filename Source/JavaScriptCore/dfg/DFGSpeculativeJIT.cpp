@@ -16018,6 +16018,7 @@ void SpeculativeJIT::compileSymbolToString(Node* node)
     cellResult(resultGPR, node);
 }
 
+#if ENABLE(JS_STRUCTS)
 void SpeculativeJIT::compileCreateStruct(Node* node)
 {
     SpeculateCellOperand callee(this, node->child1());
@@ -16036,6 +16037,7 @@ void SpeculativeJIT::compileCreateStruct(Node* node)
 
     cellResult(resultGPR, node);
 }
+#endif
 
 void SpeculativeJIT::compileCreateThis(Node* node)
 {

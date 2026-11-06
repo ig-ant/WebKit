@@ -2012,6 +2012,7 @@ llintOpWithMetadata(op_check_private_brand, OpCheckPrivateBrand, macro (size, ge
     dispatch()
 end)
 
+if JS_STRUCTS
 llintOpWithMetadata(op_create_struct, OpCreateStruct, macro (size, get, dispatch, metadata, return)
     get(m_callee, t0)
     loadp [cfr, t0, 8], t0
@@ -2052,6 +2053,11 @@ llintOpWithMetadata(op_create_struct, OpCreateStruct, macro (size, get, dispatch
     callSlowPath(_slow_path_create_struct)
     dispatch()
 end)
+else
+llintOp(op_create_struct, OpCreateStruct, macro (unused, unused, unused)
+    crash()
+end)
+end
 
 macro putByValOp(opcodeName, opcodeStruct, osrExitPoint, typedArrayPutByVal)
     llintOpWithMetadata(op_%opcodeName%, opcodeStruct, macro (size, get, dispatch, metadata, return)

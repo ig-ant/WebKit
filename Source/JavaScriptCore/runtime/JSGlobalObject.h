@@ -389,7 +389,9 @@ public:
     FunctionStructures m_builtinFunctions;
     FunctionStructures m_ordinaryFunctions;
     WriteBarrierStructureID m_boundFunctionStructure;
+#if ENABLE(JS_STRUCTS)
     WriteBarrierStructureID m_structConstructorStructure;
+#endif
 
     WriteBarrierStructureID m_regExpStructure;
 
@@ -953,7 +955,9 @@ public:
     }
 
     Structure* boundFunctionStructure() const { return m_boundFunctionStructure.get(); }
+#if ENABLE(JS_STRUCTS)
     Structure* structConstructorStructure() const { return m_structConstructorStructure.get(); }
+#endif
     Structure* customGetterFunctionStructure() const { return m_customGetterFunctionStructure.get(this); }
     Structure* customSetterFunctionStructure() const { return m_customSetterFunctionStructure.get(this); }
     Structure* nativeStdFunctionStructure() const { return m_nativeStdFunctionStructure.get(this); }

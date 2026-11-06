@@ -60,6 +60,7 @@ public:
         return false;
     }
 
+#if ENABLE(JS_STRUCTS)
     struct StructField {
         UniquedStringImpl* name;
         unsigned attributes;
@@ -68,6 +69,7 @@ public:
     static BrandedStructure* createForStruct(VM&, JSGlobalObject*, JSValue prototype, std::span<const StructField>, FixedVector<uint32_t>&& indexedFields, Symbol* brand, BrandedStructure* parent);
 
     const FixedVector<uint32_t>& indexedFields() const { return m_indexedFields; }
+#endif
 
     template<typename Visitor>
     static void visitAdditionalChildren(JSCell* cell, Visitor& visitor)
@@ -79,13 +81,17 @@ public:
 private:
     BrandedStructure(VM&, Structure*, UniquedStringImpl* brand);
     BrandedStructure(VM&, BrandedStructure*);
+#if ENABLE(JS_STRUCTS)
     BrandedStructure(VM&, JSGlobalObject*, JSValue prototype, IndexingType, unsigned inlineCapacity, UniquedStringImpl* brand, BrandedStructure* parent);
+#endif
 
     static Structure* create(VM&, Structure*, UniquedStringImpl* brand, DeferredStructureTransitionWatchpointFire* = nullptr);
 
     CompactRefPtr<UniquedStringImpl> m_brand;
     WriteBarrierStructureID m_parentBrand;
+#if ENABLE(JS_STRUCTS)
     FixedVector<uint32_t> m_indexedFields;
+#endif
 
     friend class Structure;
 };

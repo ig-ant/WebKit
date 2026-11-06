@@ -1,3 +1,4 @@
+//@ skip if !$structsEnabled
 //@ requireOptions("--useStructs=1")
 struct Counter {
     a = 0; b = 1; c = 2;

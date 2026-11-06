@@ -47,6 +47,7 @@ BrandedStructure::BrandedStructure(VM& vm, BrandedStructure* previous)
     ASSERT(isBrandedStructure());
 }
 
+#if ENABLE(JS_STRUCTS)
 BrandedStructure::BrandedStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype, IndexingType indexingType, unsigned inlineCapacity, UniquedStringImpl* brandUid, BrandedStructure* parent)
     : Structure(vm, globalObject, prototype, JSFinalObject::typeInfo(), JSFinalObject::info(), indexingType, inlineCapacity)
     , m_brand(brandUid)
@@ -83,6 +84,7 @@ BrandedStructure* BrandedStructure::createForStruct(VM& vm, JSGlobalObject* glob
     structure->setIsStructInstance(true);
     return structure;
 }
+#endif
 
 Structure* BrandedStructure::create(VM& vm, Structure* previous, UniquedStringImpl* brandUid, DeferredStructureTransitionWatchpointFire* deferred)
 {

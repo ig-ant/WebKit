@@ -156,7 +156,7 @@ public:
     JSParserScriptMode scriptMode() const { return static_cast<JSParserScriptMode>(m_scriptMode); }
     bool isClassConstructorFunction() const
     {
-        if (privateBrandRequirement() == PrivateBrandRequirement::StructInitializer)
+        if (isStructInitializer(privateBrandRequirement()))
             return false;
         switch (constructorKind()) {
         case ConstructorKind::None:
@@ -164,8 +164,10 @@ public:
             return false;
         case ConstructorKind::Base:
         case ConstructorKind::Extends:
+#if ENABLE(JS_STRUCTS)
         case ConstructorKind::StructBase:
         case ConstructorKind::StructExtends:
+#endif
             return true;
         }
         return false;

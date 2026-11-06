@@ -4757,7 +4757,11 @@ void SpeculativeJIT::compile(Node* node)
     }
 
     case CreateStruct: {
+#if ENABLE(JS_STRUCTS)
         compileCreateStruct(node);
+#else
+        DFG_CRASH(m_graph, node, "Unexpected node"_s);
+#endif
         break;
     }
 

@@ -862,6 +862,16 @@ end
 
 $assertionsEnabled = determineAssertionsEnabled
 
+def determineStructsEnabled
+    # A tarball's jsc runs on another machine and may not be runnable here.
+    return false if $tarball
+
+    command = vmInvocationPrefix + [$jscPath.to_s, "--useStructs=true", "-e", "struct S { }"]
+    !!system(*command, :out => File::NULL, :err => File::NULL)
+end
+
+$structsEnabled = determineStructsEnabled
+
 # Assertions artificially increase the jit code size.
 def smallPoolJITMemoryReservationSize
     $assertionsEnabled ? 4194304 : 1048576

@@ -1,3 +1,4 @@
+//@ skip if !$structsEnabled
 //@ requireOptions("--useStructs=1")
 struct ListNode { value; next = null; constructor(value) { this.value = value; } }
 function test(n) {

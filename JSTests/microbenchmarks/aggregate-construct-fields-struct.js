@@ -1,3 +1,4 @@
+//@ skip if !$structsEnabled
 //@ requireOptions("--useStructs=1")
 struct Vec3 { x; y; z; constructor(x, y, z) { this.x = x; this.y = y; this.z = z; } }
 function test(n) {

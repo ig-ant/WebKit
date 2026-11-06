@@ -1662,7 +1662,9 @@ public:
     void compileObjectToString(Node*);
     void compileSymbolToString(Node*);
     void compileCreateThis(Node*);
+#if ENABLE(JS_STRUCTS)
     void compileCreateStruct(Node*);
+#endif
     void compileCreatePromise(Node*);
     void compileCreateGenerator(Node*);
     void compileCreateAsyncGenerator(Node*);

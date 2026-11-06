@@ -208,9 +208,17 @@ class Heap;
 #define FOR_EACH_JSC_WEBASSEMBLY_DYNAMIC_NON_ISO_SUBSPACE(v)
 #endif
 
+#if ENABLE(JS_STRUCTS)
+#define FOR_EACH_JSC_STRUCT_DYNAMIC_ISO_SUBSPACE(v) \
+    v(structConstructorSpace, cellHeapCellType, JSStructConstructor)
+#else
+#define FOR_EACH_JSC_STRUCT_DYNAMIC_ISO_SUBSPACE(v)
+#endif
+
 #define FOR_EACH_JSC_DYNAMIC_ISO_SUBSPACE(v) \
     FOR_EACH_JSC_OBJC_API_DYNAMIC_ISO_SUBSPACE(v) \
     FOR_EACH_JSC_GLIB_API_DYNAMIC_ISO_SUBSPACE(v) \
+    FOR_EACH_JSC_STRUCT_DYNAMIC_ISO_SUBSPACE(v) \
     \
     v(apiGlobalObjectSpace, apiGlobalObjectHeapCellType, JSAPIGlobalObject) \
     v(apiValueWrapperSpace, cellHeapCellType, JSAPIValueWrapper) \
@@ -275,7 +283,6 @@ class Heap;
     v(setSpace, cellHeapCellType, JSSet) \
     v(strictEvalActivationSpace, cellHeapCellType, StrictEvalActivation) \
     v(stringIteratorSpace, cellHeapCellType, JSStringIterator) \
-    v(structConstructorSpace, cellHeapCellType, JSStructConstructor) \
     v(sourceCodeSpace, destructibleCellHeapCellType, JSSourceCode) \
     v(symbolSpace, destructibleCellHeapCellType, Symbol) \
     v(symbolObjectSpace, cellHeapCellType, SymbolObject) \

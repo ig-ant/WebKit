@@ -422,6 +422,7 @@ JSC_DEFINE_JIT_OPERATION(operationReflectOwnKeysObject, JSArray*, (JSGlobalObjec
     OPERATION_RETURN(scope, ownPropertyKeys(globalObject, object, PropertyNameMode::StringsAndSymbols, DontEnumPropertiesMode::Include));
 }
 
+#if ENABLE(JS_STRUCTS)
 JSC_DEFINE_JIT_OPERATION(operationCreateStruct, JSCell*, (VM* vmPointer, JSStructConstructor* constructor))
 {
     VM& vm = *vmPointer;
@@ -430,6 +431,7 @@ JSC_DEFINE_JIT_OPERATION(operationCreateStruct, JSCell*, (VM* vmPointer, JSStruc
     auto scope = DECLARE_THROW_SCOPE(vm);
     OPERATION_RETURN(scope, constructor->createInstance(vm));
 }
+#endif
 
 JSC_DEFINE_JIT_OPERATION(operationCreateThis, JSCell*, (JSGlobalObject* globalObject, JSObject* constructor, uint32_t inlineCapacity))
 {

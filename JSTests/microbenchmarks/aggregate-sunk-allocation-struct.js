@@ -1,3 +1,4 @@
+//@ skip if !$structsEnabled
 //@ requireOptions("--useStructs=1")
 struct Vec2 {
     x; y;

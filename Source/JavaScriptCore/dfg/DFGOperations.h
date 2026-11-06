@@ -82,7 +82,9 @@ JSC_DECLARE_JIT_OPERATION(operationObjectToStringUntyped, JSString*, (JSGlobalOb
 JSC_DECLARE_JIT_OPERATION(operationObjectToStringObjectSlow, JSString*, (JSGlobalObject*, JSObject*));
 JSC_DECLARE_JIT_OPERATION(operationReflectOwnKeys, JSArray*, (JSGlobalObject*, EncodedJSValue));
 JSC_DECLARE_JIT_OPERATION(operationReflectOwnKeysObject, JSArray*, (JSGlobalObject*, JSObject*));
+#if ENABLE(JS_STRUCTS)
 JSC_DECLARE_JIT_OPERATION(operationCreateStruct, JSCell*, (VM*, JSStructConstructor*));
+#endif
 JSC_DECLARE_JIT_OPERATION(operationCreateThis, JSCell*, (JSGlobalObject*, JSObject* constructor, uint32_t inlineCapacity));
 JSC_DECLARE_JIT_OPERATION(operationCreatePromise, JSCell*, (JSGlobalObject*, JSObject* constructor));
 JSC_DECLARE_JIT_OPERATION(operationNewResolvedPromise, JSCell*, (JSGlobalObject*, EncodedJSValue));

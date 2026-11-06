@@ -1281,7 +1281,11 @@ private:
             compileNewArrayWithSpread();
             break;
         case CreateStruct:
+#if ENABLE(JS_STRUCTS)
             compileCreateStruct();
+#else
+            DFG_CRASH(m_graph, m_node, "Unexpected node"_s);
+#endif
             break;
         case CreateThis:
             compileCreateThis();
@@ -10388,6 +10392,7 @@ IGNORE_CLANG_WARNINGS_END
         setJSValue(result);
     }
 
+#if ENABLE(JS_STRUCTS)
     void compileCreateStruct()
     {
         LValue callee = lowCell(m_node->child1());
@@ -10416,6 +10421,7 @@ IGNORE_CLANG_WARNINGS_END
         mutatorFence();
         setJSValue(result);
     }
+#endif
 
     void compileCreateThis()
     {

@@ -29,6 +29,8 @@
 #include <JavaScriptCore/BrandedStructure.h>
 #include <JavaScriptCore/JSFunction.h>
 
+#if ENABLE(JS_STRUCTS)
+
 namespace JSC {
 
 class JSStructConstructor final : public JSFunction {
@@ -92,3 +94,5 @@ JSC_DECLARE_HOST_FUNCTION(structDefineInstances);
 JSC_DECLARE_HOST_FUNCTION(structSeal);
 
 } // namespace JSC
+
+#endif // ENABLE(JS_STRUCTS)

@@ -1,3 +1,4 @@
+//@ skip if !$structsEnabled
 //@ requireOptions("--useStructs=1")
 import { shouldBe } from "./resources/assert.js";
 import Anonymous, { Named, Extended } from "./struct-declarations/exports.js";

@@ -38,12 +38,31 @@ enum class SuperBinding { Needed, NotNeeded };
 enum class PrivateBrandRequirement : uint8_t {
     None,
     Needed,
+#if ENABLE(JS_STRUCTS)
     StructConstructor,
     StructInitializer,
     StructMethod,
     StructFieldInitializer,
+#endif
 };
 
+inline constexpr bool isStructInitializer([[maybe_unused]] PrivateBrandRequirement requirement)
+{
+#if ENABLE(JS_STRUCTS)
+    return requirement == PrivateBrandRequirement::StructInitializer;
+#else
+    return false;
+#endif
+}
+
+inline constexpr bool isStructFieldInitializer([[maybe_unused]] PrivateBrandRequirement requirement)
+{
+#if ENABLE(JS_STRUCTS)
+    return requirement == PrivateBrandRequirement::StructFieldInitializer;
+#else
+    return false;
+#endif
+}
 
 enum class CodeGenerationMode : uint8_t {
     Debugger = 1 << 0,

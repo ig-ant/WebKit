@@ -34,13 +34,37 @@ enum class ConstructorKind : uint8_t {
     Base, // Class base constructor
     Extends, // Class derived constructor
     Naked, // Naked constructor, only used for builtin functions
+#if ENABLE(JS_STRUCTS)
     StructBase,
     StructExtends,
+#endif
 };
 
-inline constexpr bool isStructConstructorKind(ConstructorKind kind)
+inline constexpr bool isStructConstructorKind([[maybe_unused]] ConstructorKind kind)
 {
+#if ENABLE(JS_STRUCTS)
     return kind == ConstructorKind::StructBase || kind == ConstructorKind::StructExtends;
+#else
+    return false;
+#endif
+}
+
+inline constexpr bool isBaseConstructorKind(ConstructorKind kind)
+{
+#if ENABLE(JS_STRUCTS)
+    if (kind == ConstructorKind::StructBase)
+        return true;
+#endif
+    return kind == ConstructorKind::Base;
+}
+
+inline constexpr bool isDerivedConstructorKind(ConstructorKind kind)
+{
+#if ENABLE(JS_STRUCTS)
+    if (kind == ConstructorKind::StructExtends)
+        return true;
+#endif
+    return kind == ConstructorKind::Extends;
 }
 
 } // namespace JSC
