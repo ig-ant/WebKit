@@ -837,7 +837,12 @@ IGNORE_GCC_WARNINGS_END
     if (functionNode->needsNewTargetRegisterForThisScope() || isNewTargetUsedInInnerArrowFunction() || usesEval())
         m_newTargetRegister = addVar();
 
+    // emitCheckStructReceiver() throws unless |this| is already a struct instance.
+    bool checksStructReceiver = isStructMethod(privateBrandRequirement());
+
     auto shouldEmitToThis = [&] {
+        if (checksStructReceiver)
+            return false;
         if (functionNode->usesThis() || usesEval() || m_scopeNode->doAnyInnerArrowFunctionsUseThis() || m_scopeNode->doAnyInnerArrowFunctionsUseEval())
             return true;
         if ((functionNode->usesSuperProperty() || m_scopeNode->doAnyInnerArrowFunctionsUseSuperProperty()) && !ecmaMode.isStrict()) {
@@ -866,7 +871,8 @@ IGNORE_GCC_WARNINGS_END
 
         // FIXME: Emit to_this only when Generator uses it.
         // https://bugs.webkit.org/show_bug.cgi?id=151586
-        emitToThis();
+        if (!checksStructReceiver)
+            emitToThis();
 
         break;
     }
@@ -892,7 +898,7 @@ IGNORE_GCC_WARNINGS_END
             if (isAsyncFunctionWithoutAwait)
                 willEmitToThis = shouldEmitToThis();
             else
-                willEmitToThis = true;
+                willEmitToThis = !checksStructReceiver;
         }
         if (willEmitToThis)
             emitToThis();
@@ -978,7 +984,7 @@ IGNORE_GCC_WARNINGS_END
     }
 
 #if ENABLE(JS_STRUCTS)
-    if (privateBrandRequirement() == PrivateBrandRequirement::StructMethod)
+    if (checksStructReceiver)
         emitCheckStructReceiver();
 #endif
 

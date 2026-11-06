@@ -55,6 +55,15 @@ inline constexpr bool isStructInitializer([[maybe_unused]] PrivateBrandRequireme
 #endif
 }
 
+inline constexpr bool isStructMethod([[maybe_unused]] PrivateBrandRequirement requirement)
+{
+#if ENABLE(JS_STRUCTS)
+    return requirement == PrivateBrandRequirement::StructMethod;
+#else
+    return false;
+#endif
+}
+
 inline constexpr bool isStructFieldInitializer([[maybe_unused]] PrivateBrandRequirement requirement)
 {
 #if ENABLE(JS_STRUCTS)
