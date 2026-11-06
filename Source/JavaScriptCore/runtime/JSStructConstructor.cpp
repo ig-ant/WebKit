@@ -34,7 +34,9 @@
 #include "FunctionPrototype.h"
 #include "JSCInlines.h"
 #include "ObjectConstructor.h"
+#include "SparseArrayValueMap.h"
 #include "SubspaceInlines.h"
+#include <algorithm>
 
 namespace JSC {
 
@@ -86,7 +88,7 @@ void JSStructConstructor::defineInstanceStructure(VM& vm, BrandedStructure* stru
     RELEASE_ASSERT(!m_instanceStructure);
     RELEASE_ASSERT(structure->isStructInstance());
 
-    if (!structure->outOfLineSize()) {
+    if (canAllocateInline(structure)) {
         static_assert(!JSCell::structureIDOffset());
         static_assert(JSCell::indexingTypeAndMiscOffset() == sizeof(uint32_t));
         m_instanceInlineFieldCount = structure->inlineSize();
@@ -106,10 +108,20 @@ JSObject* JSStructConstructor::createInstance(VM& vm)
     BrandedStructure* structure = instanceStructure();
     RELEASE_ASSERT(structure);
 
+    // DFGStoreBarrierInsertionPhase requires that there is no GC safepoint after the result is allocated.
+    DeferGCForAWhile deferGC(vm);
+
     JSFinalObject* result;
-    if (unsigned outOfLineCapacity = structure->outOfLineCapacity()) {
-        // DFGStoreBarrierInsertionPhase requires that there is no GC safepoint after the result is allocated.
-        DeferGCForAWhile deferGC(vm);
+    if (auto& indexedFields = structure->indexedFields(); !indexedFields.isEmpty()) {
+        Butterfly* butterfly = createArrayStorageButterfly(vm, nullptr, structure, indexedFields.last() + 1, 0);
+        result = JSFinalObject::createWithButterfly(vm, structure, butterfly);
+
+        auto* map = SparseArrayValueMap::create(vm);
+        map->setSparseMode();
+        for (uint32_t index : indexedFields)
+            map->add(result, index).iterator->forceSet(vm, map, jsUndefined(), static_cast<unsigned>(PropertyAttribute::DontDelete));
+        butterfly->arrayStorage()->m_sparseMap.set(vm, result, map);
+    } else if (unsigned outOfLineCapacity = structure->outOfLineCapacity()) {
         Butterfly* butterfly = Butterfly::create(vm, nullptr, 0, outOfLineCapacity, false, IndexingHeader(), 0);
         result = JSFinalObject::createWithButterfly(vm, structure, butterfly);
     } else
@@ -138,6 +150,8 @@ static BrandedStructure* tryCreateInstanceStructure(JSGlobalObject* globalObject
         fields.append({ name.impl(), attributes });
     };
 
+    Vector<uint32_t> indexedFields;
+
     BrandedStructure* parentStructure = nullptr;
     if (auto* parent = constructor->parent()) {
         parentStructure = parent->instanceStructure();
@@ -146,29 +160,32 @@ static BrandedStructure* tryCreateInstanceStructure(JSGlobalObject* globalObject
             append(Identifier::fromUid(vm, entry.key()), entry.attributes());
             return true;
         });
+        indexedFields.append(parentStructure->indexedFields().span());
     }
 
     for (size_t i = 0; i < fieldNames.size(); ++i) {
         auto name = fieldNames.at(i).toPropertyKey(globalObject);
         RETURN_IF_EXCEPTION(scope, nullptr);
 
-        // FIXME: The proposal allows fields whose name is an array index.
-        if (parseIndex(name)) [[unlikely]] {
-            throwTypeError(globalObject, scope, "The name of a struct field cannot be an array index"_s);
-            return nullptr;
+        if (auto index = parseIndex(name)) [[unlikely]] {
+            indexedFields.append(index.value());
+            continue;
         }
 
         unsigned attributes = PropertyName(name).isPrivateName() ? static_cast<unsigned>(PropertyAttribute::None) : static_cast<unsigned>(PropertyAttribute::DontDelete);
         append(name, attributes);
     }
 
+    std::ranges::sort(indexedFields);
+    indexedFields.shrink(std::ranges::unique(indexedFields).begin() - indexedFields.begin());
+
     static constexpr size_t maxFields = 1 << 14;
-    if (fields.size() > maxFields) [[unlikely]] {
+    if (fields.size() + indexedFields.size() > maxFields) [[unlikely]] {
         throwTypeError(globalObject, scope, "A struct has too many fields"_s);
         return nullptr;
     }
 
-    return BrandedStructure::createForStruct(vm, globalObject, prototype, fields.span(), brand, parentStructure);
+    return BrandedStructure::createForStruct(vm, globalObject, prototype, fields.span(), FixedVector<uint32_t>(WTF::move(indexedFields)), brand, parentStructure);
 }
 
 JSC_DEFINE_HOST_FUNCTION(structCreateConstructor, (JSGlobalObject* globalObject, CallFrame* callFrame))

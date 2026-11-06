@@ -53,6 +53,8 @@ public:
 
     void defineInstanceStructure(VM&, BrandedStructure*);
 
+    static bool canAllocateInline(Structure* structure) { return !structure->outOfLineSize() && !hasIndexedProperties(structure->indexingType()); }
+
     JSObject* createInstance(VM&);
 
     static constexpr ptrdiff_t offsetOfInstanceAllocator() { return OBJECT_OFFSETOF(JSStructConstructor, m_instanceAllocator); }

@@ -8536,7 +8536,7 @@ void ByteCodeParser::parseBlock(unsigned limit)
             }
 
             Structure* structure = constructor ? constructor->instanceStructure() : nullptr;
-            if (structure && !structure->outOfLineSize()) {
+            if (structure && JSStructConstructor::canAllocateInline(structure)) {
                 Node* object = addToGraph(NewObject, OpInfo(m_graph.registerStructure(structure)));
                 Node* undefined = addToGraph(JSConstant, OpInfo(m_constantUndefined));
                 for (auto& field : structure->getPropertiesConcurrently()) {

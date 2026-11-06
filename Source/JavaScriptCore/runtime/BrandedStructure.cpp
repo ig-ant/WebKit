@@ -47,8 +47,8 @@ BrandedStructure::BrandedStructure(VM& vm, BrandedStructure* previous)
     ASSERT(isBrandedStructure());
 }
 
-BrandedStructure::BrandedStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype, unsigned inlineCapacity, UniquedStringImpl* brandUid, BrandedStructure* parent)
-    : Structure(vm, globalObject, prototype, JSFinalObject::typeInfo(), JSFinalObject::info(), JSFinalObject::defaultIndexingType, inlineCapacity)
+BrandedStructure::BrandedStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype, IndexingType indexingType, unsigned inlineCapacity, UniquedStringImpl* brandUid, BrandedStructure* parent)
+    : Structure(vm, globalObject, prototype, JSFinalObject::typeInfo(), JSFinalObject::info(), indexingType, inlineCapacity)
     , m_brand(brandUid)
     , m_parentBrand(parent, WriteBarrierEarlyInit)
 {
@@ -56,7 +56,7 @@ BrandedStructure::BrandedStructure(VM& vm, JSGlobalObject* globalObject, JSValue
     ASSERT(isBrandedStructure());
 }
 
-BrandedStructure* BrandedStructure::createForStruct(VM& vm, JSGlobalObject* globalObject, JSValue prototype, std::span<const StructField> fields, Symbol* brand, BrandedStructure* parent)
+BrandedStructure* BrandedStructure::createForStruct(VM& vm, JSGlobalObject* globalObject, JSValue prototype, std::span<const StructField> fields, FixedVector<uint32_t>&& indexedFields, Symbol* brand, BrandedStructure* parent)
 {
     ASSERT(vm.structureStructure);
     ASSERT(!parent || parent->isStructInstance());
@@ -64,9 +64,12 @@ BrandedStructure* BrandedStructure::createForStruct(VM& vm, JSGlobalObject* glob
     if (auto* object = prototype.getObject())
         object->didBecomePrototype(vm);
 
+    // Having a bad time transitions objects with any other kind of indexed storage.
+    IndexingType indexingType = indexedFields.isEmpty() ? JSFinalObject::defaultIndexingType : NonArrayWithSlowPutArrayStorage;
     unsigned inlineCapacity = std::min<size_t>(fields.size(), JSFinalObject::maxInlineCapacity);
-    auto* structure = new (NotNull, allocateCell<BrandedStructure>(vm)) BrandedStructure(vm, globalObject, prototype, inlineCapacity, &brand->uid(), parent);
+    auto* structure = new (NotNull, allocateCell<BrandedStructure>(vm)) BrandedStructure(vm, globalObject, prototype, indexingType, inlineCapacity, &brand->uid(), parent);
     structure->finishCreation(vm);
+    structure->m_indexedFields = WTF::move(indexedFields);
 
     // This Structure has no previous one to rebuild the property table from, so the table stays pinned.
     for (auto& field : fields) {

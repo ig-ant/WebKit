@@ -375,8 +375,6 @@ shouldThrow(() => { struct S extends S { } }, ReferenceError);
     shouldBe(new U().x, 5);
 }
 
-shouldThrow(() => { struct S { 0; } }, TypeError, "array index");
-shouldThrow(() => { struct S { ["1"]; } }, TypeError, "array index");
 {
     struct S { "01"; "-1"; 1.5; "4294967295"; }
     shouldBe(Object.keys(new S).length, 4);

@@ -5755,12 +5755,15 @@ void DefineFieldNode::emitBytecode(BytecodeGenerator& generator, RegisterID*)
     switch (m_type) {
     case DefineFieldNode::Type::Name: {
         StrictModeScope strictModeScope(generator);
-        if (isStructField)
-            generator.emitPutById(generator.thisRegister(), m_ident, value.get());
-        else if (auto index = parseIndex(m_ident)) {
+        if (auto index = parseIndex(m_ident)) {
             RefPtr<RegisterID> propertyName = generator.emitLoad(nullptr, jsNumber(index.value()));
-            generator.emitDirectPutByVal(generator.thisRegister(), propertyName.get(), value.get());
-        } else
+            if (isStructField)
+                generator.emitPutByVal(generator.thisRegister(), propertyName.get(), value.get());
+            else
+                generator.emitDirectPutByVal(generator.thisRegister(), propertyName.get(), value.get());
+        } else if (isStructField)
+            generator.emitPutById(generator.thisRegister(), m_ident, value.get());
+        else
             generator.emitDirectPutById(generator.thisRegister(), m_ident, value.get());
         break;
     }
