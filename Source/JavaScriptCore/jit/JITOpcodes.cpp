@@ -1529,6 +1529,26 @@ void JIT::emit_op_create_this(const JSInstruction* currentInstruction)
     emitPutVirtualRegister(bytecode.m_dst, resultReg);
 }
 
+void JIT::emit_op_create_struct(const JSInstruction* currentInstruction)
+{
+    auto bytecode = currentInstruction->as<OpCreateStruct>();
+    RegisterID calleeReg = regT0;
+    RegisterID resultReg = regT1;
+    RegisterID scratch1Reg = regT2;
+    RegisterID scratch2Reg = regT3;
+
+    emitGetVirtualRegister(bytecode.m_callee, calleeReg);
+    loadPtrFromMetadata(bytecode, OpCreateStruct::Metadata::offsetOfCachedCallee(), scratch1Reg);
+    Jump hasSeenMultipleCallees = branchPtr(Equal, scratch1Reg, TrustedImmPtr(JSCell::seenMultipleCalleeObjects()));
+    addSlowCase(branchPtr(NotEqual, calleeReg, scratch1Reg));
+    hasSeenMultipleCallees.link(this);
+
+    JumpList slowCases;
+    emitAllocateStructInstance(*m_vm, resultReg, calleeReg, scratch1Reg, scratch2Reg, slowCases);
+    addSlowCase(slowCases);
+    emitPutVirtualRegister(bytecode.m_dst, resultReg);
+}
+
 void JIT::emit_op_check_tdz(const JSInstruction* currentInstruction)
 {
     auto bytecode = currentInstruction->as<OpCheckTdz>();

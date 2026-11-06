@@ -398,7 +398,7 @@ private:
     unsigned m_isArrowFunctionContext : 1;
     unsigned m_isClassContext : 1;
     unsigned m_hasTailCalls : 1;
-    unsigned m_constructorKind : 2;
+    unsigned m_constructorKind : 3;
     unsigned m_derivedContextType : 2;
     unsigned m_evalContextType : 2;
     unsigned m_codeType : 2;
@@ -456,7 +456,7 @@ public:
         FixedVector<IdentifierSet> m_constantIdentifierSets;
 
         unsigned m_needsClassFieldInitializer : 1;
-        unsigned m_privateBrandRequirement : 1;
+        unsigned m_privateBrandRequirement : 3;
     };
 
     int outOfLineJumpOffset(JSInstructionStream::Offset);

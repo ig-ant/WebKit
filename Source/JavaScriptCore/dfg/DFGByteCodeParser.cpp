@@ -82,6 +82,7 @@
 #include "JSSentinel.h"
 #include "JSSetIterator.h"
 #include "JSStringIterator.h"
+#include "JSStructConstructor.h"
 #include "JSWrapForValidIterator.h"
 #include "MapConstructor.h"
 #include "NullSetterFunction.h"
@@ -8517,6 +8518,38 @@ void ByteCodeParser::parseBlock(unsigned limit)
                     addToGraph(CreateThis, OpInfo(bytecode.m_inlineCapacity), callee));
             }
             NEXT_OPCODE(op_create_this);
+        }
+
+        case op_create_struct: {
+            auto bytecode = currentInstruction->as<OpCreateStruct>();
+            Node* callee = get(VirtualRegister(bytecode.m_callee));
+
+            auto* constructor = callee->dynamicCastConstant<JSStructConstructor*>();
+            if (!constructor) {
+                JSCell* cachedCallee = bytecode.metadata(codeBlock).m_cachedCallee.unvalidatedGet();
+                if (cachedCallee
+                    && cachedCallee != JSCell::seenMultipleCalleeObjects()
+                    && !m_inlineStackTop->m_exitProfile.hasExitSite(m_currentIndex, BadConstantValue)) {
+                    addToGraph(CheckIsConstant, OpInfo(m_graph.freeze(cachedCallee)), callee);
+                    constructor = static_cast<JSStructConstructor*>(cachedCallee);
+                }
+            }
+
+            Structure* structure = constructor ? constructor->instanceStructure() : nullptr;
+            if (structure && !structure->outOfLineSize()) {
+                Node* object = addToGraph(NewObject, OpInfo(m_graph.registerStructure(structure)));
+                Node* undefined = addToGraph(JSConstant, OpInfo(m_constantUndefined));
+                for (auto& field : structure->getPropertiesConcurrently()) {
+                    StorageAccessData* data = m_graph.m_storageAccessData.add();
+                    data->offset = field.offset();
+                    data->identifierNumber = m_graph.identifiers().ensure(field.key());
+                    addToGraph(PutByOffset, OpInfo(data), Edge(object, KnownStorageUse), Edge(object), Edge(undefined));
+                }
+                set(VirtualRegister(bytecode.m_dst), object);
+                addToGraph(Phantom, callee);
+            } else
+                set(VirtualRegister(bytecode.m_dst), addToGraph(CreateStruct, callee));
+            NEXT_OPCODE(op_create_struct);
         }
 
         case op_create_promise: {

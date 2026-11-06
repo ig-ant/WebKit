@@ -35,7 +35,15 @@ enum class JSParserScriptMode { Classic, Module };
 
 enum class SuperBinding { Needed, NotNeeded };
 
-enum class PrivateBrandRequirement { None, Needed };
+enum class PrivateBrandRequirement : uint8_t {
+    None,
+    Needed,
+    StructConstructor,
+    StructInitializer,
+    StructMethod,
+    StructFieldInitializer,
+};
+
 
 enum class CodeGenerationMode : uint8_t {
     Debugger = 1 << 0,

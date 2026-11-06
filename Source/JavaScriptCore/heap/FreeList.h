@@ -112,6 +112,8 @@ public:
     unsigned cellSize() const { return m_cellSize; }
     
 private:
+    friend class LLIntOffsetsExtractor;
+
     FreeCell* nextInterval() const { return m_nextInterval; }
     
     char* m_intervalStart { nullptr };

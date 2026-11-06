@@ -329,6 +329,36 @@ bool PropertyListNode::hasInstanceFields() const
     return false;
 }
 
+bool PropertyListNode::hasInstanceFieldsWithInitializer() const
+{
+    for (auto list = this; list; list = list->m_next) {
+        if (list->m_node->isInstanceClassField() && list->m_node->m_assign)
+            return true;
+    }
+    return false;
+}
+
+Vector<PropertyNode*> PropertyListNode::instanceFields() const
+{
+    Vector<PropertyNode*> result;
+    for (auto list = this; list; list = list->m_next) {
+        if (list->m_node->isInstanceClassField())
+            result.append(list->m_node);
+    }
+    return result;
+}
+
+void PropertyListNode::markInstanceMethodsAsStructMethods()
+{
+    for (auto list = this; list; list = list->m_next) {
+        PropertyNode* node = list->m_node;
+        if (!node->isInstanceClassProperty() || node->isInstanceClassField())
+            continue;
+        ASSERT(node->m_assign->isBaseFuncExprNode());
+        static_cast<BaseFuncExprNode*>(node->m_assign)->metadata()->setPrivateBrandRequirement(PrivateBrandRequirement::StructMethod);
+    }
+}
+
 VariableEnvironmentNode::VariableEnvironmentNode(VariableEnvironment&& lexicalVariables)
     : m_lexicalVariables(WTF::move(lexicalVariables))
 {

@@ -73,9 +73,9 @@ struct ExecutableInfo {
 
 private:
     unsigned m_isConstructor : 1;
-    unsigned m_privateBrandRequirement : 1;
+    unsigned m_privateBrandRequirement : 3;
     unsigned m_isBuiltinFunction : 1;
-    unsigned m_constructorKind : 2;
+    unsigned m_constructorKind : 3;
     unsigned m_superBinding : 1;
     unsigned m_scriptMode: 1;
     SourceParseMode m_parseMode;

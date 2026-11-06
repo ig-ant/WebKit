@@ -44,6 +44,7 @@ struct ParserClassInfo {
     const Identifier* className { nullptr };
     unsigned startOffset { 0 };
     unsigned endOffset { 0 };
+    bool isStruct { false };
 };
 
 }

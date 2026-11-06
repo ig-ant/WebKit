@@ -62,6 +62,7 @@ public:
 
 private:
     friend class BlockDirectory;
+    friend class LLIntOffsetsExtractor;
     
     void reset();
     JS_EXPORT_PRIVATE void* allocateSlowCase(Heap&, size_t, GCDeferralContext*, AllocationFailureMode);

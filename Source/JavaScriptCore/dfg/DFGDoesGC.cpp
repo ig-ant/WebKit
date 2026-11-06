@@ -409,6 +409,7 @@ bool doesGC(Graph& graph, Node* node)
     case ToPropertyKeyOrNumber:
     case ToThis:
     case CreateThis:
+    case CreateStruct:
     case CreatePromise:
     case CreateGenerator:
     case CreateAsyncGenerator:

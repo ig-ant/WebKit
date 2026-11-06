@@ -780,7 +780,7 @@ namespace JSC {
         RegisterID* emitNewFunction(RegisterID* dst, FunctionMetadataNode*);
         RegisterID* emitNewFunctionExpression(RegisterID* dst, FuncExprNode*);
         RegisterID* emitNewDefaultConstructor(RegisterID* dst, ConstructorKind, const Identifier& name, const Identifier& ecmaName, const SourceCode& classSource, NeedsClassFieldInitializer, PrivateBrandRequirement);
-        RegisterID* emitNewClassFieldInitializerFunction(RegisterID* dst, Vector<UnlinkedFunctionExecutable::ClassElementDefinition>&&, bool isDerived);
+        RegisterID* emitNewClassFieldInitializerFunction(RegisterID* dst, Vector<UnlinkedFunctionExecutable::ClassElementDefinition>&&, bool isDerived, PrivateBrandRequirement = PrivateBrandRequirement::None);
         RegisterID* emitNewArrowFunctionExpression(RegisterID*, ArrowFuncExprNode*);
         RegisterID* emitNewMethodDefinition(RegisterID* dst, MethodDefinitionNode*);
         RegisterID* emitNewRegExp(RegisterID* dst, RegExp*);
@@ -849,8 +849,9 @@ namespace JSC {
         RegisterID* emitHasPrivateName(RegisterID* dst, RegisterID* base, RegisterID* property);
         RegisterID* emitHasStructureWithFlags(RegisterID* dst, RegisterID* src, unsigned flags);
 
-        void emitCreatePrivateBrand(const JSTextPosition& divot, const JSTextPosition& divotStart, const JSTextPosition& divotEnd);
+        void emitCreatePrivateBrand(const Identifier& description, const JSTextPosition& divot, const JSTextPosition& divotStart, const JSTextPosition& divotEnd);
         void emitInstallPrivateBrand(RegisterID* target);
+        void emitCheckStructReceiver();
         void emitInstallPrivateClassBrand(RegisterID* target);
 
         RegisterID* emitGetPrivateBrand(RegisterID* dst, RegisterID* scope, bool isStatic);
@@ -1127,6 +1128,10 @@ namespace JSC {
 
         OpcodeID lastOpcodeID() const { return m_lastOpcodeID; }
         
+        bool isInStructConstructor() const
+        {
+            return privateBrandRequirement() == PrivateBrandRequirement::StructConstructor || privateBrandRequirement() == PrivateBrandRequirement::StructInitializer;
+        }
         bool isDerivedConstructorContext() { return m_derivedContextType == DerivedContextType::DerivedConstructorContext; }
         bool isDerivedClassContext() { return m_derivedContextType == DerivedContextType::DerivedMethodContext; }
         bool isArrowFunction() { return m_codeBlock->isArrowFunction(); }
@@ -1238,7 +1243,7 @@ namespace JSC {
             NeedsClassFieldInitializer needsClassFieldInitializer = metadata->isConstructorAndNeedsClassFieldInitializer() ? NeedsClassFieldInitializer::Yes : NeedsClassFieldInitializer::No;
             PrivateBrandRequirement privateBrandRequirement = metadata->privateBrandRequirement();
             if (SourceParseModeSet(SourceParseMode::ArrowFunctionMode, SourceParseMode::AsyncArrowFunctionMode, SourceParseMode::AsyncArrowFunctionBodyMode).contains(metadata->parseMode())) {
-                if (constructorKind() == ConstructorKind::Extends || isDerivedConstructorContext()) {
+                if (constructorKind() == ConstructorKind::Extends || constructorKind() == ConstructorKind::StructExtends || isDerivedConstructorContext()) {
                     newDerivedContextType = DerivedContextType::DerivedConstructorContext;
                     needsClassFieldInitializer = m_codeBlock->needsClassFieldInitializer();
                     privateBrandRequirement = m_codeBlock->privateBrandRequirement();
@@ -1256,7 +1261,7 @@ namespace JSC {
             // https://bugs.webkit.org/show_bug.cgi?id=151547
             SourceParseMode parseMode = metadata->parseMode();
             ConstructAbility constructAbility = constructAbilityForParseMode(parseMode);
-            if (parseMode == SourceParseMode::MethodMode && metadata->constructorKind() != ConstructorKind::None)
+            if (parseMode == SourceParseMode::MethodMode && metadata->constructorKind() != ConstructorKind::None && privateBrandRequirement != PrivateBrandRequirement::StructInitializer)
                 constructAbility = ConstructAbility::CanConstruct;
 
             if (isGeneratorOrAsyncFunctionWrapperParseMode(m_codeBlock->parseMode()) && isGeneratorOrAsyncFunctionBodyParseMode(parseMode))

@@ -364,6 +364,9 @@ Structure::Structure(VM& vm, StructureVariant variant, Structure* previous)
     m_blob = TypeInfoBlob(previous->indexingModeIncludingHistory(), typeInfo);
     m_outOfLineTypeFlags = typeInfo.outOfLineTypeFlags();
 
+    // The compilers rely on struct instances never transitioning.
+    RELEASE_ASSERT(!previous->isStructInstance());
+
     ASSERT(!previous->typeInfo().structureIsImmortal());
     setPreviousID(vm, previous);
 

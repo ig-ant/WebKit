@@ -37,6 +37,7 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 #include "JSArrayBufferView.h"
 #include "JSCJSValueInlines.h"
 #include "JSDataView.h"
+#include "JSStructConstructor.h"
 #include "LinkBuffer.h"
 #include "MathCommon.h"
 #include "MaxFrameExtentForSlowPathCall.h"
@@ -1085,6 +1086,28 @@ void AssemblyHelpers::emitAllocate(GPRReg resultGPR, const JITAllocator& allocat
     }
 
     emitAllocateWithNonNullAllocator(resultGPR, allocator, allocatorGPR, scratchGPR, slowPath, slowAllocationResult);
+}
+
+void AssemblyHelpers::emitAllocateStructInstance(VM& vm, GPRReg resultGPR, GPRReg constructorGPR, GPRReg scratch1GPR, GPRReg scratch2GPR, JumpList& slowPath)
+{
+    ASSERT(noOverlap(resultGPR, constructorGPR, scratch1GPR, scratch2GPR));
+
+    loadPtr(Address(constructorGPR, JSStructConstructor::offsetOfInstanceAllocator()), scratch1GPR);
+    emitAllocate(resultGPR, JITAllocator::variable(), scratch1GPR, scratch2GPR, slowPath, SlowAllocationResult::UndefinedBehavior);
+    load64(Address(constructorGPR, JSStructConstructor::offsetOfInstanceHeader()), scratch1GPR);
+    store64(scratch1GPR, Address(resultGPR, JSCell::structureIDOffset()));
+    storePtr(TrustedImmPtr(nullptr), Address(resultGPR, JSObject::butterflyOffset()));
+
+    load32(Address(constructorGPR, JSStructConstructor::offsetOfInstanceInlineFieldCount()), scratch1GPR);
+    move(TrustedImm64(JSValue::encode(jsUndefined())), scratch2GPR);
+    Jump empty = branchTest32(Zero, scratch1GPR);
+    Label loop = label();
+    sub32(TrustedImm32(1), scratch1GPR);
+    store64(scratch2GPR, BaseIndex(resultGPR, scratch1GPR, TimesEight, JSObject::offsetOfInlineStorage()));
+    branchTest32(NonZero, scratch1GPR).linkTo(loop, this);
+    empty.link(this);
+
+    mutatorFence(vm);
 }
 
 void AssemblyHelpers::emitAllocateVariableSized(GPRReg resultGPR, const JITAllocator& allocator, Address subspaceAllocatorsBase, GPRReg allocationSize, GPRReg scratchGPR1, GPRReg scratchGPR2, JumpList& slowPath, SlowAllocationResult slowAllocationResult)

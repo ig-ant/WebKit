@@ -1091,7 +1091,7 @@ namespace JSC {
     {
     }
 
-    inline ClassExprNode::ClassExprNode(const JSTokenLocation& location, const Identifier& name, const SourceCode& classSource, VariableEnvironment&& classHeadEnvironment, VariableEnvironment&& classEnvironment, ExpressionNode* constructorExpression, ExpressionNode* classHeritage, PropertyListNode* classElements)
+    inline ClassExprNode::ClassExprNode(const JSTokenLocation& location, const Identifier& name, const SourceCode& classSource, VariableEnvironment&& classHeadEnvironment, VariableEnvironment&& classEnvironment, ExpressionNode* constructorExpression, ExpressionNode* classHeritage, PropertyListNode* classElements, bool isStruct)
         : ExpressionNode(location)
         , VariableEnvironmentNode(WTF::move(classEnvironment))
         , m_classHeadEnvironment(WTF::move(classHeadEnvironment))
@@ -1101,7 +1101,8 @@ namespace JSC {
         , m_constructorExpression(constructorExpression)
         , m_classHeritage(classHeritage)
         , m_classElements(classElements)
-        , m_needsLexicalScope(PropertyListNode::shouldCreateLexicalScopeForClass(classElements))
+        , m_isStruct(isStruct)
+        , m_needsLexicalScope(isStruct || PropertyListNode::shouldCreateLexicalScopeForClass(classElements))
     {
     }
 

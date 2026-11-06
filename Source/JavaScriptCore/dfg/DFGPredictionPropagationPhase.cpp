@@ -1357,6 +1357,7 @@ private:
             
         case ObjectCreate:
         case CreateThis:
+        case CreateStruct:
         case NewObject: {
             setPrediction(SpecFinalObject);
             break;

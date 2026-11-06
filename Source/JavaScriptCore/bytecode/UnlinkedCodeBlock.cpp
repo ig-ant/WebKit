@@ -73,10 +73,10 @@ UnlinkedCodeBlock::UnlinkedCodeBlock(VM& vm, Structure* structure, CodeType code
         createRareDataIfNecessary(locker);
         m_rareData->m_needsClassFieldInitializer = static_cast<unsigned>(NeedsClassFieldInitializer::Yes);
     }
-    if (info.privateBrandRequirement() == PrivateBrandRequirement::Needed) {
+    if (info.privateBrandRequirement() != PrivateBrandRequirement::None) {
         Locker locker { cellLock() };
         createRareDataIfNecessary(locker);
-        m_rareData->m_privateBrandRequirement = static_cast<unsigned>(PrivateBrandRequirement::Needed);
+        m_rareData->m_privateBrandRequirement = static_cast<unsigned>(info.privateBrandRequirement());
     }
 
     m_llintExecuteCounter.setNewThreshold(thresholdForJIT(Options::thresholdForJITAfterWarmUp()));

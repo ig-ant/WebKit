@@ -126,6 +126,10 @@ class JSGlobalObject;
     v(hasOwnPropertyFunction, nullptr) \
     v(reflectConstructFunction, nullptr) \
     v(createPrivateSymbol, nullptr) \
+    v(structCreateConstructor, nullptr) \
+    v(structSuperInitializer, nullptr) \
+    v(structDefineInstances, nullptr) \
+    v(structSeal, nullptr) \
     v(emptyPropertyNameEnumerator, nullptr) \
     v(sentinelString, nullptr) \
     v(arrayFromFastWithoutMapFn, nullptr) \

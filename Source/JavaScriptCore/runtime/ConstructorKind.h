@@ -34,6 +34,13 @@ enum class ConstructorKind : uint8_t {
     Base, // Class base constructor
     Extends, // Class derived constructor
     Naked, // Naked constructor, only used for builtin functions
+    StructBase,
+    StructExtends,
 };
+
+inline constexpr bool isStructConstructorKind(ConstructorKind kind)
+{
+    return kind == ConstructorKind::StructBase || kind == ConstructorKind::StructExtends;
+}
 
 } // namespace JSC

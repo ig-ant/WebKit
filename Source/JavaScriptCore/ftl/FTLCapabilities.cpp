@@ -517,6 +517,7 @@ inline CapabilityLevel canCompile(DFG::Node* node)
     case FilterCheckPrivateBrandStatus:
     case FilterSetPrivateBrandStatus:
     case CreateThis:
+    case CreateStruct:
     case CreatePromise:
     case CreateGenerator:
     case CreateAsyncGenerator:

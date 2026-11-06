@@ -275,6 +275,7 @@ class Heap;
     v(setSpace, cellHeapCellType, JSSet) \
     v(strictEvalActivationSpace, cellHeapCellType, StrictEvalActivation) \
     v(stringIteratorSpace, cellHeapCellType, JSStringIterator) \
+    v(structConstructorSpace, cellHeapCellType, JSStructConstructor) \
     v(sourceCodeSpace, destructibleCellHeapCellType, JSSourceCode) \
     v(symbolSpace, destructibleCellHeapCellType, Symbol) \
     v(symbolObjectSpace, cellHeapCellType, SymbolObject) \

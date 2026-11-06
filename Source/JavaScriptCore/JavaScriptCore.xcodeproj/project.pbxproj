@@ -1486,6 +1486,7 @@
 		86F3EEBD168CDE930077B92A /* ObjCCallbackFunction.h in Headers */ = {isa = PBXBuildFile; fileRef = 86F3EEB9168CCF750077B92A /* ObjCCallbackFunction.h */; };
 		86F3EEBF168CDE930077B92A /* ObjcRuntimeExtras.h in Headers */ = {isa = PBXBuildFile; fileRef = 86F3EEB616855A5B0077B92A /* ObjcRuntimeExtras.h */; };
 		86FA9E92142BBB2E001773B7 /* JSBoundFunction.h in Headers */ = {isa = PBXBuildFile; fileRef = 86FA9E90142BBB2E001773B7 /* JSBoundFunction.h */; settings = {ATTRIBUTES = (Private, ); }; };
+		57C1A0022F00000100A1B2C3 /* JSStructConstructor.h in Headers */ = {isa = PBXBuildFile; fileRef = 57C1A0012F00000100A1B2C3 /* JSStructConstructor.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		87673EE3E79BBDF070119925 /* JSEmbedderArrayLike.h in Headers */ = {isa = PBXBuildFile; fileRef = 2ACD2ED06C9E402C762987F4 /* JSEmbedderArrayLike.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		8AF85BDD2C9CE0E3005E28DA /* JSIteratorHelper.h in Headers */ = {isa = PBXBuildFile; fileRef = 8AF85BDA2C9CD1E4005E28DA /* JSIteratorHelper.h */; };
 		8AF85BE22CA4EE90005E28DA /* JSIteratorHelperPrototype.h in Headers */ = {isa = PBXBuildFile; fileRef = 8AF85BDE2CA4EE89005E28DA /* JSIteratorHelperPrototype.h */; };
@@ -5268,6 +5269,8 @@
 		86F75EFD151C062F007C9BA3 /* RegExpMatchesArray.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = RegExpMatchesArray.cpp; sourceTree = "<group>"; };
 		86FA9E8F142BBB2D001773B7 /* JSBoundFunction.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = JSBoundFunction.cpp; sourceTree = "<group>"; };
 		86FA9E90142BBB2E001773B7 /* JSBoundFunction.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = JSBoundFunction.h; sourceTree = "<group>"; };
+		57C1A0012F00000100A1B2C3 /* JSStructConstructor.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = JSStructConstructor.h; sourceTree = "<group>"; };
+		57C1A0032F00000100A1B2C3 /* JSStructConstructor.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = JSStructConstructor.cpp; sourceTree = "<group>"; };
 		8791D173F2EE43A7E6469029 /* PinballHandlerContext.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PinballHandlerContext.h; sourceTree = "<group>"; };
 		8852151A9C3842389B3215B7 /* ScriptFetcher.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ScriptFetcher.h; sourceTree = "<group>"; };
 		8AA92D3D2CACA137002D872B /* JSIteratorHelperPrototype.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = JSIteratorHelperPrototype.js; sourceTree = "<group>"; };
@@ -9470,6 +9473,8 @@
 				276B38FB2A71D2B200252F4E /* JSStringIteratorInlines.h */,
 				2600B5A4152BAAA70091EE5F /* JSStringJoiner.cpp */,
 				2600B5A5152BAAA70091EE5F /* JSStringJoiner.h */,
+				57C1A0032F00000100A1B2C3 /* JSStructConstructor.cpp */,
+				57C1A0012F00000100A1B2C3 /* JSStructConstructor.h */,
 				0F919D09157EE09D004A4E7D /* JSSymbolTableObject.cpp */,
 				0F919D0A157EE09D004A4E7D /* JSSymbolTableObject.h */,
 				276B39042A71D2B300252F4E /* JSSymbolTableObjectInlines.h */,
@@ -12507,6 +12512,7 @@
 				FEFD6FC61D5E7992008F2F0B /* JSStringInlines.h in Headers */,
 				70EC0EC31AA0D7DA00B6AAFA /* JSStringIterator.h in Headers */,
 				2600B5A7152BAAA70091EE5F /* JSStringJoiner.h in Headers */,
+				57C1A0022F00000100A1B2C3 /* JSStructConstructor.h in Headers */,
 				BC18C4280E16F5CD00B34460 /* JSStringRef.h in Headers */,
 				BC18C4290E16F5CD00B34460 /* JSStringRefCF.h in Headers */,
 				1A28D4CA177B71C80007FA3C /* JSStringRefCPP.h in Headers */,

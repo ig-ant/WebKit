@@ -60,6 +60,13 @@ public:
         return false;
     }
 
+    struct StructField {
+        UniquedStringImpl* name;
+        unsigned attributes;
+    };
+
+    static BrandedStructure* createForStruct(VM&, JSGlobalObject*, JSValue prototype, std::span<const StructField>, Symbol* brand, BrandedStructure* parent);
+
     template<typename Visitor>
     static void visitAdditionalChildren(JSCell* cell, Visitor& visitor)
     {
@@ -70,6 +77,7 @@ public:
 private:
     BrandedStructure(VM&, Structure*, UniquedStringImpl* brand);
     BrandedStructure(VM&, BrandedStructure*);
+    BrandedStructure(VM&, JSGlobalObject*, JSValue prototype, unsigned inlineCapacity, UniquedStringImpl* brand, BrandedStructure* parent);
 
     static Structure* create(VM&, Structure*, UniquedStringImpl* brand, DeferredStructureTransitionWatchpointFire* = nullptr);
 

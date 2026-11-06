@@ -55,6 +55,8 @@ public:
     explicit operator bool() const { return *this != Allocator(); }
     
 private:
+    friend class LLIntOffsetsExtractor;
+
     LocalAllocator* m_localAllocator { nullptr };
 };
 

@@ -47,6 +47,40 @@ BrandedStructure::BrandedStructure(VM& vm, BrandedStructure* previous)
     ASSERT(isBrandedStructure());
 }
 
+BrandedStructure::BrandedStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype, unsigned inlineCapacity, UniquedStringImpl* brandUid, BrandedStructure* parent)
+    : Structure(vm, globalObject, prototype, JSFinalObject::typeInfo(), JSFinalObject::info(), JSFinalObject::defaultIndexingType, inlineCapacity)
+    , m_brand(brandUid)
+    , m_parentBrand(parent, WriteBarrierEarlyInit)
+{
+    m_structureVariant = StructureVariant::Branded;
+    ASSERT(isBrandedStructure());
+}
+
+BrandedStructure* BrandedStructure::createForStruct(VM& vm, JSGlobalObject* globalObject, JSValue prototype, std::span<const StructField> fields, Symbol* brand, BrandedStructure* parent)
+{
+    ASSERT(vm.structureStructure);
+    ASSERT(!parent || parent->isStructInstance());
+
+    if (auto* object = prototype.getObject())
+        object->didBecomePrototype(vm);
+
+    unsigned inlineCapacity = std::min<size_t>(fields.size(), JSFinalObject::maxInlineCapacity);
+    auto* structure = new (NotNull, allocateCell<BrandedStructure>(vm)) BrandedStructure(vm, globalObject, prototype, inlineCapacity, &brand->uid(), parent);
+    structure->finishCreation(vm);
+
+    // This Structure has no previous one to rebuild the property table from, so the table stays pinned.
+    for (auto& field : fields) {
+        structure->addPropertyWithoutTransition(vm, PropertyName(field.name), field.attributes, [&](const GCSafeConcurrentJSLocker&, PropertyOffset, PropertyOffset newMaxOffset) {
+            structure->setMaxOffset(vm, newMaxOffset);
+        });
+    }
+
+    structure->setDidPreventExtensions(true);
+    structure->setMayBePrototype(true);
+    structure->setIsStructInstance(true);
+    return structure;
+}
+
 Structure* BrandedStructure::create(VM& vm, Structure* previous, UniquedStringImpl* brandUid, DeferredStructureTransitionWatchpointFire* deferred)
 {
     ASSERT(vm.structureStructure);

@@ -47,6 +47,7 @@
 #include "HasOwnPropertyCache.h"
 #include "JSArrayBufferView.h"
 #include "JSBoundFunction.h"
+#include "JSStructConstructor.h"
 #include "JSGlobalObject.h"
 #include "JSGlobalProxy.h"
 #include "JSMap.h"

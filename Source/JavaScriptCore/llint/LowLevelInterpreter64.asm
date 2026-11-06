@@ -2012,6 +2012,47 @@ llintOpWithMetadata(op_check_private_brand, OpCheckPrivateBrand, macro (size, ge
     dispatch()
 end)
 
+llintOpWithMetadata(op_create_struct, OpCreateStruct, macro (size, get, dispatch, metadata, return)
+    get(m_callee, t0)
+    loadp [cfr, t0, 8], t0
+    metadata(t5, t2)
+    loadp OpCreateStruct::Metadata::m_cachedCallee[t5], t1
+    bpeq t1, t0, .opCreateStructAllocate
+    bpneq t1, SeenMultipleCalleeObjects, .opCreateStructSlow
+
+.opCreateStructAllocate:
+    loadp JSStructConstructor::m_instanceAllocator + Allocator::m_localAllocator[t0], t1
+    btpz t1, .opCreateStructSlow
+    loadp LocalAllocator::m_freeList + FreeList::m_intervalStart[t1], t2
+    loadp LocalAllocator::m_freeList + FreeList::m_intervalEnd[t1], t3
+    bpaeq t2, t3, .opCreateStructSlow
+    loadi LocalAllocator::m_freeList + FreeList::m_cellSize[t1], t3
+    addp t2, t3
+    storep t3, LocalAllocator::m_freeList + FreeList::m_intervalStart[t1]
+
+    loadq JSStructConstructor::m_instanceHeader[t0], t1
+    storeq t1, JSCell::m_structureID[t2]
+    storep 0, JSObjectWithButterfly::m_butterfly[t2]
+    loadi JSStructConstructor::m_instanceInlineFieldCount[t0], t1
+    move ValueUndefined, t3
+    btiz t1, .opCreateStructDone
+.opCreateStructLoop:
+    subi 1, t1
+    storeq t3, (sizeof JSObjectWithButterfly)[t2, t1, 8]
+    btinz t1, .opCreateStructLoop
+
+.opCreateStructDone:
+    if not X86_64
+        # The concurrent collector must not see the cell before its contents.
+        memfence
+    end
+    return(t2)
+
+.opCreateStructSlow:
+    callSlowPath(_slow_path_create_struct)
+    dispatch()
+end)
+
 macro putByValOp(opcodeName, opcodeStruct, osrExitPoint, typedArrayPutByVal)
     llintOpWithMetadata(op_%opcodeName%, opcodeStruct, macro (size, get, dispatch, metadata, return)
         macro contiguousPutByVal(storeCallback)

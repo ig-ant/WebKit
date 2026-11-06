@@ -446,6 +446,7 @@ namespace JSC {
         const Identifier useStrictIdentifier;
         const Identifier negativeOneIdentifier;
         const Identifier usingIdentifier;
+        const Identifier structIdentifier;
     private:
         std::unique_ptr<BuiltinNames> m_builtinNames;
 

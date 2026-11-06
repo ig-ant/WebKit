@@ -592,6 +592,15 @@ ALWAYS_INLINE ASCIILiteral JSObject::putDirectInternal(VM& vm, PropertyName prop
         if (mode == PutModePut && (currentAttributes & PropertyAttribute::ReadOnlyOrAccessorOrCustomAccessor))
             return ReadonlyPropertyChangeError;
 
+        if constexpr (mode == PutModeDefineOwnProperty) {
+            // JSObject::defineOwnProperty has already rejected attribute changes, so only take the value.
+            if (structure->isStructInstance()) [[unlikely]] {
+                if (newAttributes & PropertyAttribute::AccessorOrCustomAccessorOrValue)
+                    return UnconfigurablePropertyChangeAccessMechanismError;
+                newAttributes = currentAttributes;
+            }
+        }
+
         structure->didReplaceProperty(offset);
         putDirectOffset(vm, offset, value);
 
@@ -614,6 +623,9 @@ ALWAYS_INLINE ASCIILiteral JSObject::putDirectInternal(VM& vm, PropertyName prop
 
     if constexpr (mode == PutModePut) {
         if (!isStructureExtensible()) [[unlikely]]
+            return NonExtensibleObjectPropertyDefineError;
+    } else {
+        if (structure->isStructInstance()) [[unlikely]]
             return NonExtensibleObjectPropertyDefineError;
     }
     
@@ -874,7 +886,7 @@ inline JSValue JSObject::get(JSGlobalObject* globalObject, uint64_t propertyName
 JSObject* createInvalidPrivateNameError(JSGlobalObject*);
 JSObject* createRedefinedPrivateNameError(JSGlobalObject*);
 JSObject* createReinstallPrivateMethodError(JSGlobalObject*);
-JSObject* createPrivateMethodAccessError(JSGlobalObject*);
+JSObject* createPrivateMethodAccessError(JSGlobalObject*, Symbol* brand);
 
 ALWAYS_INLINE bool JSObject::getPrivateFieldSlot(JSObject* object, JSGlobalObject* globalObject, PropertyName propertyName, PropertySlot& slot)
 {
@@ -958,6 +970,11 @@ inline void JSObject::definePrivateField(JSGlobalObject* globalObject, PropertyN
     }
     EXCEPTION_ASSERT(!scope.exception());
 
+    if (structure()->isStructInstance()) [[unlikely]] {
+        throwTypeError(globalObject, scope, "Cannot define private field on a struct instance"_s);
+        return;
+    }
+
     scope.release();
     putDirect(vm, propertyName, value, putSlot);
 }
@@ -1003,7 +1020,7 @@ inline void JSObject::checkPrivateBrand(JSGlobalObject* globalObject, JSValue br
 
     Structure* structure = this->structure();
     if (!structure->isBrandedStructure() || !uncheckedDowncast<BrandedStructure>(structure)->checkBrand(asSymbol(brand)))
-        throwException(globalObject, scope, createPrivateMethodAccessError(globalObject));
+        throwException(globalObject, scope, createPrivateMethodAccessError(globalObject, asSymbol(brand)));
 }
 
 inline void JSObject::setPrivateBrand(JSGlobalObject* globalObject, JSValue brand)
@@ -1021,6 +1038,11 @@ inline void JSObject::setPrivateBrand(JSGlobalObject* globalObject, JSValue bran
 
     if (type() == WebAssemblyGCObjectType) {
         throwTypeError(globalObject, scope, "Cannot add private method to a WebAssembly GC object"_s);
+        return;
+    }
+
+    if (structure->isStructInstance()) [[unlikely]] {
+        throwTypeError(globalObject, scope, "Cannot add private method to a struct instance"_s);
         return;
     }
 

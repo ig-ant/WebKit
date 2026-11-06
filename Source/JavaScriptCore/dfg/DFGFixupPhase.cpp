@@ -2464,6 +2464,7 @@ private:
         case OverridesHasInstance:
         case CheckStructure:
         case CreateThis:
+        case CreateStruct:
         case CreatePromise:
         case CreateGenerator:
         case CreateAsyncGenerator:

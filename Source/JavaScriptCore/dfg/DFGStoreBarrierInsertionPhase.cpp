@@ -432,6 +432,7 @@ private:
             
             switch (m_node->op()) {
             case NewObject:
+            case CreateStruct:
             case NewArray:
             case NewArrayWithSize:
             case NewArrayWithButterfly:

@@ -775,6 +775,9 @@ namespace JSC {
             return m_node->isInstanceClassField();
         }
         NODELETE bool hasInstanceFields() const;
+        NODELETE bool hasInstanceFieldsWithInitializer() const;
+        Vector<PropertyNode*> instanceFields() const;
+        void markInstanceMethodsAsStructMethods();
 
         bool isStaticClassField() const
         {
@@ -2262,11 +2265,11 @@ namespace JSC {
         unsigned m_implementationVisibility : bitWidthOfImplementationVisibility;
         LexicallyScopedFeatures m_lexicallyScopedFeatures : bitWidthOfLexicallyScopedFeatures;
         unsigned m_superBinding : 1;
-        unsigned m_constructorKind : 2;
+        unsigned m_constructorKind : 3;
         unsigned m_needsClassFieldInitializer : 1;
         unsigned m_isArrowFunctionBodyExpression : 1;
         unsigned m_isSloppyModeHoistedFunction : 1 { 0 };
-        unsigned m_privateBrandRequirement : 1;
+        unsigned m_privateBrandRequirement : 3;
         SourceParseMode m_parseMode;
         FunctionMode m_functionMode;
         Identifier m_ident;
@@ -2394,7 +2397,7 @@ namespace JSC {
     public:
         ClassExprNode(const JSTokenLocation&, const Identifier&, const SourceCode& classSource,
             VariableEnvironment&& classHeadEnvironment, VariableEnvironment&& classEnvironment, ExpressionNode* constructorExpresssion,
-            ExpressionNode* parentClass, PropertyListNode* classElements);
+            ExpressionNode* parentClass, PropertyListNode* classElements, bool isStruct);
 
         const Identifier& name() { return m_name; }
         const Identifier& ecmaName() { return m_ecmaName ? *m_ecmaName : m_name; }
@@ -2406,6 +2409,8 @@ namespace JSC {
     private:
         RegisterID* emitBytecode(BytecodeGenerator&, RegisterID* = nullptr) final;
 
+        RegisterID* emitStructBytecode(BytecodeGenerator&, RegisterID* dst, RegisterID* superclass);
+
         bool isClassExprNode() const final { return true; }
 
         VariableEnvironment m_classHeadEnvironment;
@@ -2415,6 +2420,7 @@ namespace JSC {
         ExpressionNode* m_constructorExpression;
         ExpressionNode* m_classHeritage;
         PropertyListNode* m_classElements;
+        bool m_isStruct;
         bool m_needsLexicalScope;
     };
 

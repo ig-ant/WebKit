@@ -1280,6 +1280,9 @@ private:
         case NewArrayWithSpread:
             compileNewArrayWithSpread();
             break;
+        case CreateStruct:
+            compileCreateStruct();
+            break;
         case CreateThis:
             compileCreateThis();
             break;
@@ -10382,6 +10385,35 @@ IGNORE_CLANG_WARNINGS_END
 
         LValue result = vmCall(Int64, operationNewArrayWithSpreadSlow, weakPointer(globalObject), m_out.constIntPtr(buffer), m_out.constInt32(m_node->numChildren()));
 
+        setJSValue(result);
+    }
+
+    void compileCreateStruct()
+    {
+        LValue callee = lowCell(m_node->child1());
+
+        LBasicBlock slowPath = m_out.newBlock();
+        LBasicBlock continuation = m_out.newBlock();
+
+        LBasicBlock lastNext = m_out.insertNewBlocksBefore(slowPath);
+        LValue allocator = m_out.loadPtr(callee, m_heaps.JSStructConstructor_instanceAllocator);
+        LValue fastObject = allocateHeapCell(allocator, slowPath);
+        m_out.store32(m_out.load32(callee, m_heaps.JSStructConstructor_instanceStructureID), fastObject, m_heaps.JSCell_structureID);
+        m_out.store32(m_out.load32(callee, m_heaps.JSStructConstructor_instanceTypeInfoBlob), fastObject, m_heaps.JSCell_usefulBytes);
+        m_out.storePtr(m_out.intPtrZero, fastObject, m_heaps.JSObject_butterfly);
+        LValue begin = m_out.constInt32(JSFinalObject::offsetOfInlineStorage() / 8);
+        LValue end = m_out.add(begin, m_out.load32(callee, m_heaps.JSStructConstructor_instanceInlineFieldCount));
+        splatWords(fastObject, begin, end, m_out.constInt64(JSValue::encode(jsUndefined())), m_heaps.properties.atAnyNumber());
+        ValueFromBlock fastResult = m_out.anchor(fastObject);
+        m_out.jump(continuation);
+
+        m_out.appendTo(slowPath, continuation);
+        ValueFromBlock slowResult = m_out.anchor(vmCall(Int64, operationCreateStruct, m_vmValue, callee));
+        m_out.jump(continuation);
+
+        m_out.appendTo(continuation, lastNext);
+        LValue result = m_out.phi(Int64, fastResult, slowResult);
+        mutatorFence();
         setJSValue(result);
     }
 

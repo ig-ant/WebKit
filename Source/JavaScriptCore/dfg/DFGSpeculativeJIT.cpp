@@ -16018,6 +16018,25 @@ void SpeculativeJIT::compileSymbolToString(Node* node)
     cellResult(resultGPR, node);
 }
 
+void SpeculativeJIT::compileCreateStruct(Node* node)
+{
+    SpeculateCellOperand callee(this, node->child1());
+    GPRTemporary result(this);
+    GPRTemporary scratch1(this);
+    GPRTemporary scratch2(this);
+
+    GPRReg calleeGPR = callee.gpr();
+    GPRReg resultGPR = result.gpr();
+    GPRReg scratch1GPR = scratch1.gpr();
+    GPRReg scratch2GPR = scratch2.gpr();
+
+    JumpList slowPath;
+    emitAllocateStructInstance(vm(), resultGPR, calleeGPR, scratch1GPR, scratch2GPR, slowPath);
+    addSlowPathGenerator(slowPathCall(slowPath, this, operationCreateStruct, resultGPR, TrustedImmPtr(&vm()), calleeGPR));
+
+    cellResult(resultGPR, node);
+}
+
 void SpeculativeJIT::compileCreateThis(Node* node)
 {
     // Note that there is not so much profit to speculate here. The only things we

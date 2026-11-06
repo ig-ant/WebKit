@@ -810,6 +810,10 @@ template <class TreeBuilder> TreeStatement Parser<LexerType>::parseStatementList
             }
             restoreSavePoint(context, savePoint);
         }
+        if (isStartOfStructDeclaration(context, DeclarationDefaultContext::Standard)) [[unlikely]] {
+            result = parseClassDeclaration(context);
+            break;
+        }
         if (*m_token.m_data.ident == m_vm.propertyNames->async && !m_token.m_data.escaped) [[unlikely]] {
             // Eagerly parse as AsyncFunctionDeclaration. This is the uncommon case,
             // but could be mistakenly parsed as an AsyncFunctionExpression.
@@ -2342,7 +2346,7 @@ NODELETE static ALWAYS_INLINE SuperBinding adjustSuperBindingForBaseConstructor(
             return SuperBinding::Needed;
     }
 
-    if (constructorKind == ConstructorKind::None || constructorKind == ConstructorKind::Base) {
+    if (constructorKind == ConstructorKind::None || constructorKind == ConstructorKind::Base || constructorKind == ConstructorKind::StructBase) {
         bool isSuperUsedInInnerArrowFunction = innerArrowFunctionFeatures & SuperPropertyInnerArrowFunctionFeature;
         return (scopeNeedsSuperBinding || isSuperUsedInInnerArrowFunction || currentScopeUsesEval) ? SuperBinding::Needed : SuperBinding::NotNeeded;
     }
@@ -3018,14 +3022,32 @@ template <class TreeBuilder> TreeStatement Parser<LexerType>::parseAsyncFunction
     return result;
 }
 
+// https://tc39.es/proposal-structs/
+template <typename LexerType>
+template <class TreeBuilder> bool Parser<LexerType>::isStartOfStructDeclaration(TreeBuilder& context, DeclarationDefaultContext declarationDefaultContext)
+{
+    if (!Options::useStructs() || !match(IDENT)) [[likely]]
+        return false;
+    if (*m_token.m_data.ident != m_vm.propertyNames->structIdentifier || m_token.m_data.escaped)
+        return false;
+
+    SavePoint savePoint = createSavePoint(context);
+    next();
+    bool result = !m_lexer->hasLineTerminatorBeforeToken()
+        && (matchSpecIdentifier() || (declarationDefaultContext == DeclarationDefaultContext::ExportDefault && (match(OPENBRACE) || match(EXTENDS))));
+    restoreSavePoint(context, savePoint);
+    return result;
+}
+
 template <typename LexerType>
 template <class TreeBuilder> TreeStatement Parser<LexerType>::parseClassDeclaration(TreeBuilder& context, ExportType exportType, DeclarationDefaultContext declarationDefaultContext)
 {
-    ASSERT(match(CLASSTOKEN));
+    ASSERT(match(CLASSTOKEN) || isStartOfStructDeclaration(context, declarationDefaultContext));
     JSTokenLocation location(tokenLocation());
     JSTextPosition classStart = tokenStartPosition();
 
     ParserClassInfo<TreeBuilder> info;
+    info.isStruct = !match(CLASSTOKEN);
     FunctionNameRequirements requirements = FunctionNameRequirements::Named;
     if (declarationDefaultContext == DeclarationDefaultContext::ExportDefault) {
         // Under the "export default" context, class declaration does not require the class name.
@@ -3067,7 +3089,7 @@ static constexpr ASCIILiteral staticComputedNamePrefix { "staticComputedName"_s 
 template <typename LexerType>
 template <class TreeBuilder> TreeClassExpression Parser<LexerType>::parseClass(TreeBuilder& context, FunctionNameRequirements requirements, ParserClassInfo<TreeBuilder>& info)
 {
-    ASSERT(match(CLASSTOKEN));
+    ASSERT(match(CLASSTOKEN) || info.isStruct);
     JSTextPosition start = tokenStartPosition();
     JSTokenLocation location(tokenLocation());
     info.startOffset = location.startOffset;
@@ -3114,7 +3136,11 @@ template <class TreeBuilder> TreeClassExpression Parser<LexerType>::parseClass(T
         parentClass = parseMemberExpression(context);
         failIfFalse(parentClass, "Cannot parse the parent class name");
     }
-    const ConstructorKind constructorKind = parentClass ? ConstructorKind::Extends : ConstructorKind::Base;
+    ConstructorKind constructorKind;
+    if (info.isStruct)
+        constructorKind = parentClass ? ConstructorKind::StructExtends : ConstructorKind::StructBase;
+    else
+        constructorKind = parentClass ? ConstructorKind::Extends : ConstructorKind::Base;
 
     JSTextPosition classHeadEnd = lastTokenEndPosition();
     consumeOrFail(OPENBRACE, "Expected opening '{' at the start of a class body");
@@ -3367,22 +3393,20 @@ parseMethod:
     info.endOffset = tokenLocation().endOffset - 1;
     consumeOrFail(CLOSEBRACE, "Expected a closing '}' after a class body");
 
-    if (declaresPrivateMethod || declaresPrivateAccessor || declaresStaticPrivateMethod || declaresStaticPrivateAccessor) {
-        {
-            Identifier privateBrandIdentifier = m_vm.propertyNames->builtinNames().privateBrandPrivateName();
-            DeclarationResultMask declarationResult = classScope->declareLexicalVariable(&privateBrandIdentifier, true);
-            ASSERT_UNUSED(declarationResult, declarationResult == DeclarationResult::Valid);
-            classScope->useVariable(&privateBrandIdentifier, false);
-            classScope->addClosedVariableCandidateUnconditionally(privateBrandIdentifier.impl());
-        }
-        {
-            Identifier privateClassBrandIdentifier = m_vm.propertyNames->builtinNames().privateClassBrandPrivateName();
-            DeclarationResultMask declarationResult = classScope->declareLexicalVariable(&privateClassBrandIdentifier, true);
-            ASSERT_UNUSED(declarationResult, declarationResult == DeclarationResult::Valid);
-            classScope->useVariable(&privateClassBrandIdentifier, false);
-            classScope->addClosedVariableCandidateUnconditionally(privateClassBrandIdentifier.impl());
-        }
+    auto declareHiddenVariable = [&](const Identifier& name) {
+        DeclarationResultMask declarationResult = classScope->declareLexicalVariable(&name, true);
+        ASSERT_UNUSED(declarationResult, declarationResult == DeclarationResult::Valid);
+        classScope->useVariable(&name, false);
+        classScope->addClosedVariableCandidateUnconditionally(name.impl());
+    };
+
+    if (declaresPrivateMethod || declaresPrivateAccessor || declaresStaticPrivateMethod || declaresStaticPrivateAccessor || info.isStruct) {
+        declareHiddenVariable(m_vm.propertyNames->builtinNames().privateBrandPrivateName());
+        declareHiddenVariable(m_vm.propertyNames->builtinNames().privateClassBrandPrivateName());
     }
+
+    if (info.isStruct)
+        declareHiddenVariable(m_vm.propertyNames->builtinNames().structSuperInitializerPrivateName());
 
     if constexpr (std::is_same_v<TreeBuilder, ASTBuilder>) {
         if (classElements)
@@ -4000,6 +4024,14 @@ template <class TreeBuilder> TreeStatement Parser<LexerType>::parseExportDeclara
             if (match(IDENT))
                 localName = m_token.m_data.ident;
             restoreSavePoint(context, savePoint);
+        } else if (isStartOfStructDeclaration(context, DeclarationDefaultContext::ExportDefault)) {
+            // export default StructDeclaration[~Yield, +Await, +Default]
+            SavePoint savePoint = createSavePoint(context);
+            isFunctionOrClassDeclaration = true;
+            next();
+            if (match(IDENT))
+                localName = m_token.m_data.ident;
+            restoreSavePoint(context, savePoint);
         } else if (matchContextualKeyword(m_vm.propertyNames->async)) {
             // export default async function xxx() { }
             // export default async function * yyy() { }
@@ -4023,7 +4055,7 @@ template <class TreeBuilder> TreeStatement Parser<LexerType>::parseExportDeclara
             if (startsWithFunction) {
                 ASSERT(match(FUNCTION));
                 result = parseFunctionDeclaration(context, FunctionDeclarationType::Declaration, ExportType::NotExported, DeclarationDefaultContext::ExportDefault);
-            } else if (match(CLASSTOKEN)) {
+            } else if (match(CLASSTOKEN) || !matchContextualKeyword(m_vm.propertyNames->async)) {
                 result = parseClassDeclaration(context, ExportType::NotExported, DeclarationDefaultContext::ExportDefault);
             } else {
                 ASSERT(matchContextualKeyword(m_vm.propertyNames->async));
@@ -4153,6 +4185,10 @@ template <class TreeBuilder> TreeStatement Parser<LexerType>::parseExportDeclara
             break;
 
         case IDENT:
+            if (isStartOfStructDeclaration(context, DeclarationDefaultContext::Standard)) [[unlikely]] {
+                result = parseClassDeclaration(context, ExportType::Exported);
+                break;
+            }
             if (*m_token.m_data.ident == m_vm.propertyNames->async && !m_token.m_data.escaped) [[likely]] {
                 unsigned functionStart = m_token.m_startPosition;
                 next();
@@ -5655,7 +5691,7 @@ template <class TreeBuilder> TreeExpression Parser<LexerType>::parseMemberExpres
                         // inside of the constructor or method.
                         if (!m_lexer->isReparsingFunction()) {
                             Scope* closestOrdinaryFunctionScope = closestParentOrdinaryFunctionNonLexicalScope();
-                            semanticFailIfFalse(closestOrdinaryFunctionScope->constructorKind() == ConstructorKind::Extends || (closestOrdinaryFunctionScope->isEvalContext() && closestOrdinaryFunctionScope->derivedContextType() == DerivedContextType::DerivedConstructorContext), "super is not valid in this context");
+                            semanticFailIfFalse(closestOrdinaryFunctionScope->constructorKind() == ConstructorKind::Extends || closestOrdinaryFunctionScope->constructorKind() == ConstructorKind::StructExtends || (closestOrdinaryFunctionScope->isEvalContext() && closestOrdinaryFunctionScope->derivedContextType() == DerivedContextType::DerivedConstructorContext), "super is not valid in this context");
                         }
                         if (currentScope()->isArrowFunction())
                             functionScope->setInnerArrowFunctionUsesSuperCall();

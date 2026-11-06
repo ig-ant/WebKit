@@ -56,6 +56,7 @@
 #include "JSSet.h"
 #include "JSSetIterator.h"
 #include "JSStringIteratorInlines.h"
+#include "JSStructConstructor.h"
 #include "JSWithScope.h"
 #include "LLIntCommon.h"
 #include "LLIntExceptions.h"
@@ -198,6 +199,21 @@ JSC_DEFINE_COMMON_SLOW_PATH(slow_path_create_this)
         }
     }
     RETURN(result);
+}
+
+JSC_DEFINE_COMMON_SLOW_PATH(slow_path_create_struct)
+{
+    BEGIN();
+    auto bytecode = pc->as<OpCreateStruct>();
+    auto* constructor = uncheckedDowncast<JSStructConstructor>(asObject(GET(bytecode.m_callee).jsValue()));
+
+    WriteBarrier<JSCell>& cachedCallee = bytecode.metadata(codeBlock).m_cachedCallee;
+    if (!cachedCallee)
+        cachedCallee.set(vm, codeBlock, constructor);
+    else if (cachedCallee.unvalidatedGet() != JSCell::seenMultipleCalleeObjects() && cachedCallee.get() != constructor)
+        cachedCallee.setWithoutWriteBarrier(JSCell::seenMultipleCalleeObjects());
+
+    RETURN(constructor->createInstance(vm));
 }
 
 JSC_DEFINE_COMMON_SLOW_PATH(slow_path_create_promise)

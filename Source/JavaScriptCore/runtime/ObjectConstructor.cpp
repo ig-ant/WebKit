@@ -1178,7 +1178,8 @@ JSObject* objectConstructorFreeze(JSGlobalObject* globalObject, JSObject* object
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    if (is<JSFinalObject>(*object) || isJSArray(object)) {
+    bool isStructInstance = object->structure()->isStructInstance();
+    if ((is<JSFinalObject>(*object) && !isStructInstance) || isJSArray(object)) {
         object->freeze(vm);
         return object;
     }

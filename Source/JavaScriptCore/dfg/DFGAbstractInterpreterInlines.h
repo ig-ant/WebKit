@@ -3947,6 +3947,10 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
         break;
     }
 
+    case CreateStruct:
+        setTypeForNode(node, SpecFinalObject);
+        break;
+
     case CreateThis: {
         if (JSValue base = forNode(node->child1()).m_value) {
             if (auto* function = dynamicDowncast<JSFunction>(base)) {

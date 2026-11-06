@@ -156,12 +156,16 @@ public:
     JSParserScriptMode scriptMode() const { return static_cast<JSParserScriptMode>(m_scriptMode); }
     bool isClassConstructorFunction() const
     {
+        if (privateBrandRequirement() == PrivateBrandRequirement::StructInitializer)
+            return false;
         switch (constructorKind()) {
         case ConstructorKind::None:
         case ConstructorKind::Naked:
             return false;
         case ConstructorKind::Base:
         case ConstructorKind::Extends:
+        case ConstructorKind::StructBase:
+        case ConstructorKind::StructExtends:
             return true;
         }
         return false;
@@ -297,9 +301,9 @@ private:
     unsigned m_isGeneratedFromCache : 1;
     unsigned m_isBuiltinFunction : 1;
     unsigned m_isBuiltinDefaultClassConstructor : 1;
-    unsigned m_privateBrandRequirement : 1;
+    unsigned m_privateBrandRequirement : 3;
     CodeFeatures m_features : bitWidthOfCodeFeatures;
-    uint16_t m_constructorKind : 2;
+    uint16_t m_constructorKind : 3;
     SourceParseMode m_sourceParseMode;
     uint8_t m_implementationVisibility : bitWidthOfImplementationVisibility;
     LexicallyScopedFeatures m_lexicallyScopedFeatures : bitWidthOfLexicallyScopedFeatures;

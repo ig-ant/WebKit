@@ -123,6 +123,16 @@ public:
         notifyWriteSlow(vm, owner, value, reason);
     }
     
+    // This does not fire, so it is only valid if no compiler can have observed |oldValue| yet.
+    void replaceUnobservedValue(VM& vm, JSCell* owner, JSCellType* oldValue, JSCellType* newValue)
+    {
+        if (inferredValue() != oldValue)
+            return;
+        RELEASE_ASSERT(isThin() && state() == IsWatched);
+        m_data = (std::bit_cast<uintptr_t>(newValue) & ValueMask) | encodeState(IsWatched);
+        vm.writeBarrier(owner, newValue);
+    }
+
     void reconcileWeakReferencesAtGCEnd(VM&, CollectionScope);
 
 private:

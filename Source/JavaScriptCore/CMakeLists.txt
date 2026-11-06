@@ -1305,6 +1305,7 @@ set(JavaScriptCore_PRIVATE_FRAMEWORK_HEADERS
     runtime/JSString.h
     runtime/JSStringInlines.h
     runtime/JSStringIterator.h
+    runtime/JSStructConstructor.h
     runtime/JSStringIteratorInlines.h
     runtime/JSStringJoiner.h
     runtime/JSSymbolTableObject.h

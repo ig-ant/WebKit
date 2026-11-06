@@ -53,6 +53,8 @@ SourceCode BuiltinExecutables::defaultConstructorSourceCode(ConstructorKind cons
     case ConstructorKind::None:
     case ConstructorKind::Naked:
         break;
+    case ConstructorKind::StructBase:
+    case ConstructorKind::StructExtends:
     case ConstructorKind::Base: {
         static NeverDestroyed<const String> baseConstructorCode(MAKE_STATIC_STRING_IMPL("(function () { })"));
         return makeSource(baseConstructorCode, { }, SourceTaintedOrigin::Untainted);
@@ -74,7 +76,10 @@ UnlinkedFunctionExecutable* BuiltinExecutables::createDefaultConstructor(Constru
         break;
     case ConstructorKind::Base:
     case ConstructorKind::Extends:
-        return createExecutable(m_vm, defaultConstructorSourceCode(constructorKind), name, ImplementationVisibility::Public, constructorKind, ConstructAbility::CanConstruct, InlineAttribute::Always, needsClassFieldInitializer, privateBrandRequirement);
+    case ConstructorKind::StructBase:
+    case ConstructorKind::StructExtends:
+        return createExecutable(m_vm, defaultConstructorSourceCode(constructorKind), name, ImplementationVisibility::Public, constructorKind,
+            privateBrandRequirement == PrivateBrandRequirement::StructInitializer ? ConstructAbility::CannotConstruct : ConstructAbility::CanConstruct, InlineAttribute::Always, needsClassFieldInitializer, privateBrandRequirement);
     }
     ASSERT_NOT_REACHED();
     return nullptr;

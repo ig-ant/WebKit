@@ -193,6 +193,10 @@ namespace JSC {
     macro(hasOwnPropertyFunction) \
     macro(reflectConstructFunction) \
     macro(createPrivateSymbol) \
+    macro(structCreateConstructor) \
+    macro(structSuperInitializer) \
+    macro(structDefineInstances) \
+    macro(structSeal) \
     macro(entries) \
     macro(emptyPropertyNameEnumerator) \
     macro(sentinelString) \

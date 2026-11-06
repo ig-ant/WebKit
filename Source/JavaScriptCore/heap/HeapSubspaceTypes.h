@@ -89,6 +89,7 @@
 #include "JSSourceCode.h"
 #include "JSString.h"
 #include "JSStringIterator.h"
+#include "JSStructConstructor.h"
 #include "JSTemplateObjectDescriptor.h"
 #include "JSTypedArrays.h"
 #include "JSWebAssemblyArray.h"

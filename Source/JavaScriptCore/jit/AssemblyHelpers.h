@@ -1573,6 +1573,8 @@ public:
         empty.link(this);
     }
 
+    void emitAllocateStructInstance(VM&, GPRReg resultGPR, GPRReg constructorGPR, GPRReg scratch1GPR, GPRReg scratch2GPR, JumpList& slowPath);
+
     void emitInitializeOutOfLineStorage(GPRReg butterflyGPR, unsigned outOfLineCapacity, GPRReg scratchGPR)
     {
         ptrdiff_t initialOffset = -sizeof(IndexingHeader) - outOfLineCapacity * sizeof(EncodedJSValue);

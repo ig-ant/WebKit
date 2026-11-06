@@ -2267,6 +2267,7 @@ void clobberize(Graph& graph, Node* node, NOESCAPE const ReadFunctor& read, NOES
         return;
 
     case NewObject:
+    case CreateStruct:
     case NewInternalFieldObject:
     case NewPromise:
     case NewRegExp:

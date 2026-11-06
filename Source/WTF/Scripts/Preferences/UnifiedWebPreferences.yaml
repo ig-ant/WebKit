@@ -6191,6 +6191,17 @@ StorageBlockingPolicy:
     WebCore: StorageBlockingPolicy::AllowAll
   sharedPreferenceForWebProcess: true
 
+StructsEnabled:
+  type: bool
+  status: unstable
+  category: javascript
+  humanReadableName: "Structs"
+  humanReadableDescription: "Enable struct declarations."
+  jscOptionName: useStructs
+  sharedPreferenceForWebProcess: true
+  excludeFrom: [ WebKitLegacy, WebCore ]
+  defaultValue: false
+
 SupportHDRCompositorTonemappingEnabled:
   type: bool
   status: testable

@@ -86,7 +86,7 @@ protected:
     EvalExecutable(JSGlobalObject*, const SourceCode&, LexicallyScopedFeatures, DerivedContextType, bool isArrowFunctionContext, bool isInsideOrdinaryFunction, EvalContextType, NeedsClassFieldInitializer, PrivateBrandRequirement);
 
     unsigned m_needsClassFieldInitializer : 1;
-    unsigned m_privateBrandRequirement : 1;
+    unsigned m_privateBrandRequirement : 3;
 
     std::unique_ptr<TemplateObjectMap> m_templateObjectMap;
 };

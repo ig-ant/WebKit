@@ -590,6 +590,7 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case EnumeratorNextUpdatePropertyName:
     case ToThis:
     case CreateThis:
+    case CreateStruct:
     case CreatePromise:
     case CreateGenerator:
     case CreateAsyncGenerator:

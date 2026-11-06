@@ -1384,6 +1384,19 @@ RegisterID* EvalFunctionCallNode::emitBytecode(BytecodeGenerator& generator, Reg
 
 RegisterID* FunctionCallValueNode::emitBytecode(BytecodeGenerator& generator, RegisterID* dst)
 {
+    if (m_expr->isSuperNode() && generator.isInStructConstructor()) {
+        if (generator.isDerivedConstructorContext())
+            generator.emitLoadThisFromArrowFunctionLexicalEnvironment();
+        Variable initializerVar = generator.variable(generator.propertyNames().builtinNames().structSuperInitializerPrivateName());
+        RefPtr<RegisterID> func = generator.newTemporary();
+        generator.emitGetFromScope(func.get(), generator.emitResolveScope(nullptr, initializerVar), initializerVar, ThrowIfNotFound);
+
+        RefPtr<RegisterID> returnValue = generator.finalDestination(dst, func.get());
+        CallArguments callArguments(generator, m_args);
+        generator.move(callArguments.thisRegister(), generator.thisRegister());
+        return generator.emitCall(returnValue.get(), func.get(), NoExpectedFunction, callArguments, divot(), divotStart(), divotEnd(), DebuggableCall::Yes);
+    }
+
     if (m_expr->isSuperNode()) {
         RefPtr<RegisterID> func = emitGetSuperFunctionForConstruct(generator);
         RefPtr<RegisterID> returnValue = generator.finalDestination(dst, func.get());
@@ -5334,6 +5347,18 @@ void FunctionNode::emitBytecode(BytecodeGenerator& generator, RegisterID*)
     generator.emitProfileControlFlow(startStartOffset());
     generator.emitDebugHook(DidEnterCallFrame, JSTextPosition(startStartOffset()));
 
+    if (generator.privateBrandRequirement() == PrivateBrandRequirement::StructFieldInitializer && generator.isDerivedClassContext()) {
+        RegisterID callee;
+        callee.setIndex(CallFrameSlot::callee);
+        RefPtr<RegisterID> parentInitializer = generator.emitDirectGetById(generator.newTemporary(), &callee, generator.propertyNames().builtinNames().instanceFieldInitializerPrivateName());
+        Ref<Label> noParentInitializer = generator.newLabel();
+        generator.emitJumpIfTrue(generator.emitIsUndefined(generator.newTemporary(), parentInitializer.get()), noParentInitializer.get());
+        CallArguments args(generator, nullptr);
+        generator.move(args.thisRegister(), generator.thisRegister());
+        generator.emitCallIgnoreResult(generator.newTemporary(), parentInitializer.get(), NoExpectedFunction, args, position(), position(), position(), DebuggableCall::No);
+        generator.emitLabel(noParentInitializer.get());
+    }
+
     switch (generator.parseMode()) {
     case SourceParseMode::GeneratorWrapperFunctionMode:
     case SourceParseMode::GeneratorWrapperMethodMode:
@@ -5725,10 +5750,14 @@ void DefineFieldNode::emitBytecode(BytecodeGenerator& generator, RegisterID*)
             generator.emitSetFunctionName(value.get(), m_ident);
     }
 
+    bool isStructField = generator.privateBrandRequirement() == PrivateBrandRequirement::StructFieldInitializer;
+
     switch (m_type) {
     case DefineFieldNode::Type::Name: {
         StrictModeScope strictModeScope(generator);
-        if (auto index = parseIndex(m_ident)) {
+        if (isStructField)
+            generator.emitPutById(generator.thisRegister(), m_ident, value.get());
+        else if (auto index = parseIndex(m_ident)) {
             RefPtr<RegisterID> propertyName = generator.emitLoad(nullptr, jsNumber(index.value()));
             generator.emitDirectPutByVal(generator.thisRegister(), propertyName.get(), value.get());
         } else
@@ -5741,7 +5770,10 @@ void DefineFieldNode::emitBytecode(BytecodeGenerator& generator, RegisterID*)
 
         generator.emitExpressionInfo(position(), position(), position() + m_ident.length());
         RefPtr<RegisterID> privateName = generator.emitLoadPrivateName(var);
-        generator.emitDefinePrivateField(generator.thisRegister(), privateName.get(), value.get());
+        if (isStructField)
+            generator.emitPrivateFieldPut(generator.thisRegister(), privateName.get(), value.get());
+        else
+            generator.emitDefinePrivateField(generator.thisRegister(), privateName.get(), value.get());
         break;
     }
     case DefineFieldNode::Type::ComputedName: {
@@ -5759,7 +5791,10 @@ void DefineFieldNode::emitBytecode(BytecodeGenerator& generator, RegisterID*)
         generator.emitProfileType(privateName.get(), var, m_position, m_position + m_ident.length());
         {
             StrictModeScope strictModeScope(generator);
-            generator.emitDirectPutByVal(generator.thisRegister(), privateName.get(), value.get());
+            if (isStructField)
+                generator.emitPutByVal(generator.thisRegister(), privateName.get(), value.get());
+            else
+                generator.emitDirectPutByVal(generator.thisRegister(), privateName.get(), value.get());
         }
         break;
     }
@@ -5792,13 +5827,16 @@ RegisterID* ClassExprNode::emitBytecode(BytecodeGenerator& generator, RegisterID
     if (m_needsLexicalScope)
         generator.pushLexicalScope(this, BytecodeGenerator::ScopeType::ClassScope, BytecodeGenerator::TDZCheckOptimization::Optimize, BytecodeGenerator::NestedScopeType::IsNested);
 
+    if (m_isStruct)
+        return emitStructBytecode(generator, dst, superclass.get());
+
     bool hasPrivateNames = !!m_lexicalVariables.privateNamesSize();
     bool shouldEmitPrivateBrand = m_lexicalVariables.hasInstancePrivateMethodOrAccessor();
     bool shouldInstallBrandOnConstructor = m_lexicalVariables.hasStaticPrivateMethodOrAccessor();
     if (hasPrivateNames)
         generator.pushPrivateAccessNames(m_lexicalVariables.privateNameEnvironment());
     if (shouldEmitPrivateBrand)
-        generator.emitCreatePrivateBrand(m_position, m_position, m_position);
+        generator.emitCreatePrivateBrand(generator.propertyNames().emptyIdentifier, m_position, m_position, m_position);
 
     RefPtr<RegisterID> constructor = generator.tempDestination(dst);
     bool needsHomeObject = false;
@@ -5892,6 +5930,154 @@ RegisterID* ClassExprNode::emitBytecode(BytecodeGenerator& generator, RegisterID
 
     if (m_needsLexicalScope)
         generator.popLexicalScope(this);
+
+    if (!m_name.isNull())
+        generator.popClassHeadLexicalScope(m_classHeadEnvironment);
+
+    return generator.move(generator.finalDestination(dst, constructor.get()), constructor.get());
+}
+
+// https://tc39.es/proposal-structs/#sec-structdefinitionevaluation
+RegisterID* ClassExprNode::emitStructBytecode(BytecodeGenerator& generator, RegisterID* dst, RegisterID* superclass)
+{
+    auto callHelper = [&](LinkTimeConstant helper, std::initializer_list<RegisterID*> arguments) -> RefPtr<RegisterID> {
+        RefPtr<RegisterID> result = generator.newTemporary();
+        RefPtr<RegisterID> function = generator.moveLinkTimeConstant(nullptr, helper);
+        CallArguments callArguments(generator, nullptr, arguments.size());
+        generator.emitLoad(callArguments.thisRegister(), jsUndefined());
+        unsigned index = 0;
+        for (auto* argument : arguments)
+            generator.move(callArguments.argumentRegister(index++), argument);
+        return generator.emitCall(result.get(), function.get(), NoExpectedFunction, callArguments, divot(), divotStart(), divotEnd(), DebuggableCall::No);
+    };
+
+    const auto& propertyNames = generator.propertyNames();
+    bool hasPrivateNames = !!m_lexicalVariables.privateNamesSize();
+    if (hasPrivateNames)
+        generator.pushPrivateAccessNames(m_lexicalVariables.privateNameEnvironment());
+    generator.emitCreatePrivateBrand(ecmaName() == propertyNames.starDefaultPrivateName ? propertyNames.defaultKeyword : ecmaName(), m_position, m_position, m_position);
+
+    if (m_classElements)
+        m_classElements->markInstanceMethodsAsStructMethods();
+
+    auto constructorKind = m_classHeritage ? ConstructorKind::StructExtends : ConstructorKind::StructBase;
+    auto needsClassFieldInitializer = m_classHeritage || (m_classElements && m_classElements->hasInstanceFieldsWithInitializer()) ? NeedsClassFieldInitializer::Yes : NeedsClassFieldInitializer::No;
+    auto emitConstructor = [&](PrivateBrandRequirement privateBrandRequirement, NeedsClassFieldInitializer needsClassFieldInitializer) -> RefPtr<RegisterID> {
+        RefPtr<RegisterID> result = generator.newTemporary();
+        if (!m_constructorExpression)
+            return generator.emitNewDefaultConstructor(result.get(), constructorKind, m_name, ecmaName(), m_classSource, needsClassFieldInitializer, privateBrandRequirement);
+
+        ASSERT(m_constructorExpression->isFuncExprNode());
+        FunctionMetadataNode* metadata = static_cast<FuncExprNode*>(m_constructorExpression)->metadata();
+        metadata->setEcmaName(ecmaName());
+        metadata->setClassSource(m_classSource);
+        metadata->setNeedsClassFieldInitializer(needsClassFieldInitializer == NeedsClassFieldInitializer::Yes);
+        metadata->setPrivateBrandRequirement(privateBrandRequirement);
+        return generator.emitNode(result.get(), m_constructorExpression);
+    };
+    RefPtr<RegisterID> initializer = emitConstructor(PrivateBrandRequirement::StructInitializer, NeedsClassFieldInitializer::No);
+    RefPtr<RegisterID> constructorTemplate = emitConstructor(PrivateBrandRequirement::StructConstructor, needsClassFieldInitializer);
+
+    RefPtr<RegisterID> hasHeritage = generator.emitLoad(nullptr, jsBoolean(!!m_classHeritage));
+    RefPtr<RegisterID> undefined = generator.emitLoad(nullptr, jsUndefined());
+    RefPtr<RegisterID> constructor = callHelper(LinkTimeConstant::structCreateConstructor, { constructorTemplate.get(), initializer.get(), hasHeritage.get(), superclass ? superclass : undefined.get() });
+
+    {
+        RefPtr<RegisterID> superInitializer = callHelper(LinkTimeConstant::structSuperInitializer, { constructor.get() });
+        Variable superInitializerVar = generator.variable(propertyNames.builtinNames().structSuperInitializerPrivateName());
+        generator.emitPutToScope(generator.scopeRegister(), superInitializerVar, superInitializer.get(), DoNotThrowIfNotFound, InitializationMode::ConstInitialization);
+    }
+
+    if (m_lexicalVariables.hasStaticPrivateMethodOrAccessor())
+        generator.emitInstallPrivateClassBrand(constructor.get());
+
+    RefPtr<RegisterID> prototype = generator.emitNewObject(generator.newTemporary());
+    if (superclass) {
+        RefPtr<RegisterID> protoParent = generator.newTemporary();
+        generator.emitLoad(protoParent.get(), jsNull());
+        Ref<Label> superclassIsNullLabel = generator.newLabel();
+        generator.emitJumpIfTrue(generator.emitIsNull(generator.newTemporary(), superclass), superclassIsNullLabel.get());
+        generator.emitGetById(protoParent.get(), superclass, propertyNames.prototype);
+        generator.emitLabel(superclassIsNullLabel.get());
+        generator.emitDirectSetPrototypeOf<InvalidPrototypeMode::Throw>(prototype.get(), protoParent.get(), divot(), divotStart(), divotEnd());
+    }
+
+    if (m_constructorExpression) {
+        emitPutHomeObject(generator, constructor.get(), prototype.get());
+        emitPutHomeObject(generator, initializer.get(), prototype.get());
+    }
+
+    RefPtr<RegisterID> constructorNameRegister = generator.emitLoad(nullptr, propertyNames.constructor);
+    generator.emitCallDefineProperty(prototype.get(), constructorNameRegister.get(), constructor.get(), nullptr, nullptr,
+        BytecodeGenerator::PropertyConfigurable | BytecodeGenerator::PropertyWritable, m_position);
+
+    RefPtr<RegisterID> prototypeNameRegister = generator.emitLoad(nullptr, propertyNames.prototype);
+    generator.emitCallDefineProperty(constructor.get(), prototypeNameRegister.get(), prototype.get(), nullptr, nullptr, 0, m_position);
+
+    Vector<PropertyNode*> fields;
+    Vector<UnlinkedFunctionExecutable::ClassElementDefinition> staticElementDefinitions;
+    RefPtr<RegisterID> fieldInitializer = undefined;
+    if (m_classElements) {
+        m_classElements->emitDeclarePrivateFieldNames(generator, generator.scopeRegister());
+        fields = m_classElements->instanceFields();
+
+        Vector<UnlinkedFunctionExecutable::ClassElementDefinition> instanceElementDefinitions;
+        generator.emitDefineClassElements(m_classElements, constructor.get(), prototype.get(), instanceElementDefinitions, staticElementDefinitions);
+
+        instanceElementDefinitions.removeAllMatching([](auto& definition) {
+            return !definition.initializerPosition;
+        });
+        if (!instanceElementDefinitions.isEmpty()) {
+            fieldInitializer = generator.emitNewClassFieldInitializerFunction(generator.newTemporary(), WTF::move(instanceElementDefinitions), m_classHeritage, PrivateBrandRequirement::StructFieldInitializer);
+            emitPutHomeObject(generator, fieldInitializer.get(), prototype.get());
+        }
+    }
+
+    {
+        RefPtr<RegisterID> defineInstances = generator.moveLinkTimeConstant(nullptr, LinkTimeConstant::structDefineInstances);
+        static constexpr unsigned fixedArguments = 4;
+        CallArguments arguments(generator, nullptr, fixedArguments + fields.size());
+        generator.emitLoad(arguments.thisRegister(), jsUndefined());
+        generator.move(arguments.argumentRegister(0), constructor.get());
+        generator.move(arguments.argumentRegister(1), prototype.get());
+        Variable brandVar = generator.variable(propertyNames.builtinNames().privateBrandPrivateName());
+        generator.emitGetPrivateBrand(arguments.argumentRegister(2), generator.emitResolveScope(nullptr, brandVar), false);
+        generator.move(arguments.argumentRegister(3), fieldInitializer.get());
+        for (unsigned i = 0; i < fields.size(); ++i) {
+            auto* field = fields[i];
+            RegisterID* name = arguments.argumentRegister(fixedArguments + i);
+            if (field->isPrivate() || field->hasComputedName()) {
+                Variable var = generator.variable(*field->name());
+                RefPtr<RegisterID> scope = generator.emitResolveScope(nullptr, var);
+                generator.emitGetFromScope(name, scope.get(), var, ThrowIfNotFound);
+            } else
+                generator.emitLoad(name, *field->name());
+        }
+        generator.emitCallIgnoreResult(generator.newTemporary(), defineInstances.get(), NoExpectedFunction, arguments, divot(), divotStart(), divotEnd(), DebuggableCall::No);
+    }
+
+    if (!m_name.isNull()) {
+        Variable nameVar = generator.variable(m_name);
+        RELEASE_ASSERT(nameVar.isResolved());
+        RefPtr<RegisterID> scope = generator.emitResolveScope(nullptr, nameVar);
+        generator.emitPutToScope(scope.get(), nameVar, constructor.get(), ThrowIfNotFound, InitializationMode::Initialization);
+    }
+
+    if (!staticElementDefinitions.isEmpty()) {
+        RefPtr<RegisterID> staticFieldInitializer = generator.emitNewClassFieldInitializerFunction(generator.newTemporary(), WTF::move(staticElementDefinitions), m_classHeritage);
+        emitPutHomeObject(generator, staticFieldInitializer.get(), constructor.get());
+
+        CallArguments args(generator, nullptr);
+        generator.move(args.thisRegister(), constructor.get());
+        generator.emitCallIgnoreResult(generator.newTemporary(), staticFieldInitializer.get(), NoExpectedFunction, args, position(), position(), position(), DebuggableCall::No);
+    }
+
+    callHelper(LinkTimeConstant::structSeal, { constructor.get(), prototype.get() });
+
+    if (hasPrivateNames)
+        generator.popPrivateAccessNames();
+
+    generator.popLexicalScope(this);
 
     if (!m_name.isNull())
         generator.popClassHeadLexicalScope(m_classHeadEnvironment);

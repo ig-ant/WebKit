@@ -1057,7 +1057,7 @@ private:
     CachedVector<CachedBitVector> m_bitVectors;
     CachedVector<CachedHashSet<CachedRefPtr<CachedUniquedStringImpl>, IdentifierRepHash>> m_constantIdentifierSets;
     unsigned m_needsClassFieldInitializer : 1;
-    unsigned m_privateBrandRequirement : 1;
+    unsigned m_privateBrandRequirement : 3;
 };
 
 class CachedExpressionInfo : public CachedObject<ExpressionInfo> {
@@ -1948,9 +1948,9 @@ private:
     unsigned m_parametersStartOffset : 31;
     unsigned m_unlinkedFunctionEnd;
     unsigned m_parameterCount:31;
-    unsigned m_privateBrandRequirement : 1;
+    unsigned m_privateBrandRequirement : 3;
     SourceParseMode m_sourceParseMode;
-    unsigned m_constructorKind : 2;
+    unsigned m_constructorKind : 3;
     unsigned m_functionMode : 2; // FunctionMode
     unsigned m_derivedContextType: 2;
     unsigned m_evalContextType : 2;
@@ -2035,7 +2035,7 @@ private:
     unsigned m_scriptMode: 1;
     unsigned m_isArrowFunctionContext : 1;
     unsigned m_isClassContext : 1;
-    unsigned m_constructorKind : 2;
+    unsigned m_constructorKind : 3;
     unsigned m_derivedContextType : 2;
     unsigned m_evalContextType : 2;
     unsigned m_hasTailCalls : 1;

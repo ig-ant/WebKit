@@ -2032,6 +2032,8 @@ ArrayStorage* JSObject::ensureArrayStorageSlow(VM& vm)
 
     switch (indexingType()) {
     case ALL_BLANK_INDEXING_TYPES:
+        if (structure()->isStructInstance()) [[unlikely]]
+            return nullptr;
         if (indexingShouldBeSparse()) [[unlikely]]
             return ensureArrayStorageExistsAndEnterDictionaryIndexingMode(vm);
         return createInitialArrayStorage(vm);
@@ -2920,6 +2922,10 @@ void JSObject::freeze(VM& vm)
 {
     if (isFrozen(vm))
         return;
+    if (structure()->isStructInstance()) [[unlikely]] {
+        ASSERT_NOT_REACHED();
+        return;
+    }
     materializeLazyOwnProperties(vm);
     if (ArrayStorage* storage = enterDictionaryIndexingMode(vm)) {
         SparseArrayValueMap* map = storage->m_sparseMap.get();
@@ -3080,7 +3086,7 @@ ALWAYS_INLINE static bool canDoFastPutDirectIndex(JSObject* object)
         return false;
 
     return (isJSArray(object) && !isCopyOnWrite(object->indexingMode()))
-        || is<JSFinalObject>(object);
+        || (is<JSFinalObject>(object) && !object->structure()->isStructInstance());
 }
 
 // https://tc39.es/ecma262/#sec-ordinarydefineownproperty
@@ -3090,6 +3096,9 @@ bool JSObject::defineOwnIndexedProperty(JSGlobalObject* globalObject, unsigned i
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     ASSERT(index <= MAX_ARRAY_INDEX);
+
+    if (structure()->isStructInstance()) [[unlikely]]
+        return typeError(globalObject, scope, throwException, NonExtensibleObjectPropertyDefineError);
 
     ensureWritable(vm);
 
@@ -3445,6 +3454,14 @@ bool JSObject::putByIndexBeyondVectorLength(JSGlobalObject* globalObject, unsign
     
     switch (indexingType()) {
     case ALL_BLANK_INDEXING_TYPES: {
+        if (structure()->isStructInstance()) [[unlikely]] {
+            bool putResult = false;
+            bool handledByPrototype = attemptToInterceptPutByIndexOnHole(globalObject, i, value, shouldThrow, putResult);
+            RETURN_IF_EXCEPTION(scope, false);
+            if (handledByPrototype)
+                return putResult;
+            return typeError(globalObject, scope, shouldThrow, NonExtensibleObjectPropertyDefineError);
+        }
         if (indexingShouldBeSparse()) {
             auto* arrayStorage = ensureArrayStorageExistsAndEnterDictionaryIndexingMode(vm);
             if (!hasSlowPutArrayStorage(indexingType())) [[likely]]
@@ -4091,6 +4108,8 @@ bool validateAndApplyPropertyDescriptor(JSGlobalObject* globalObject, JSObject* 
         return true;
     // Step 9.
     unsigned attributes = descriptor.attributesOverridingCurrent(current);
+    if (object->structure()->isStructInstance() && attributes != current.attributes()) [[unlikely]]
+        return typeError(globalObject, scope, throwException, "Attempting to change the attributes of a struct field."_s);
     if (descriptor.isAccessorDescriptor() || (current.isAccessorDescriptor() && !descriptor.isDataDescriptor())) {
         ASSERT(attributes & PropertyAttribute::Accessor);
         JSObject* getter = descriptor.getterPresent() ? descriptor.getterObject() : (current.getterPresent() ? current.getterObject() : nullptr);

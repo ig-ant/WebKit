@@ -616,6 +616,15 @@ op :create_this,
         cachedCallee: WriteBarrier[JSCell]
     }
 
+op :create_struct,
+    args: {
+        dst: VirtualRegister,
+        callee: VirtualRegister,
+    },
+    metadata: {
+        cachedCallee: WriteBarrier[JSCell]
+    }
+
 op :new_object,
     args: {
         dst: VirtualRegister,

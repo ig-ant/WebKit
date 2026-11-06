@@ -4756,6 +4756,11 @@ void SpeculativeJIT::compile(Node* node)
         break;
     }
 
+    case CreateStruct: {
+        compileCreateStruct(node);
+        break;
+    }
+
     case CreateThis: {
         compileCreateThis(node);
         break;
