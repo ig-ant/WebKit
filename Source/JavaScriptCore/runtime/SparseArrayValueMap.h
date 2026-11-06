@@ -188,7 +188,7 @@ public:
     // These methods may mutate the contents of the map
     bool putEntry(JSGlobalObject*, JSObject*, unsigned, JSValue, bool shouldThrow);
     bool putDirect(JSGlobalObject*, JSObject*, unsigned, JSValue, unsigned attributes, PutDirectIndexMode);
-    AddResult add(JSObject*, unsigned);
+    AddResult add(JSCell* owner, unsigned);
     iterator find(unsigned i) { return m_set.find<SparseArrayEntryTranslator>(i); }
     // This should ASSERT the remove is valid (check the result of the find).
     void remove(iterator);

@@ -108,18 +108,16 @@ JSObject* JSStructConstructor::createInstance(VM& vm)
     BrandedStructure* structure = instanceStructure();
     RELEASE_ASSERT(structure);
 
-    // DFGStoreBarrierInsertionPhase requires that there is no GC safepoint after the result is allocated.
-    DeferGCForAWhile deferGC(vm);
-
+    // DFGStoreBarrierInsertionPhase requires that there is no GC safepoint after the result is allocated, so it comes last.
     JSFinalObject* result;
     if (auto& indexedFields = structure->indexedFields(); !indexedFields.isEmpty()) {
-        Butterfly* butterfly = createArrayStorageButterfly(vm, nullptr, structure, indexedFields.last() + 1, 0);
-        result = JSFinalObject::createWithButterfly(vm, structure, butterfly);
-
         auto* map = SparseArrayValueMap::create(vm);
+        EnsureStillAliveScope keepAlive { map };
         map->setSparseMode();
         for (uint32_t index : indexedFields)
-            map->add(result, index).iterator->forceSet(vm, map, jsUndefined(), static_cast<unsigned>(PropertyAttribute::DontDelete));
+            map->add(map, index).iterator->forceSet(vm, map, jsUndefined(), static_cast<unsigned>(PropertyAttribute::DontDelete));
+        Butterfly* butterfly = createArrayStorageButterfly(vm, nullptr, structure, indexedFields.last() + 1, 0);
+        result = JSFinalObject::createWithButterfly(vm, structure, butterfly);
         butterfly->arrayStorage()->m_sparseMap.set(vm, result, map);
     } else if (unsigned outOfLineCapacity = structure->outOfLineCapacity()) {
         Butterfly* butterfly = Butterfly::create(vm, nullptr, 0, outOfLineCapacity, false, IndexingHeader(), 0);
