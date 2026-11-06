@@ -108,7 +108,8 @@ JSObject* JSStructConstructor::createInstance(VM& vm)
 
     JSFinalObject* result;
     if (unsigned outOfLineCapacity = structure->outOfLineCapacity()) {
-        DeferGC deferGC(vm);
+        // DFGStoreBarrierInsertionPhase requires that there is no GC safepoint after the result is allocated.
+        DeferGCForAWhile deferGC(vm);
         Butterfly* butterfly = Butterfly::create(vm, nullptr, 0, outOfLineCapacity, false, IndexingHeader(), 0);
         result = JSFinalObject::createWithButterfly(vm, structure, butterfly);
     } else
