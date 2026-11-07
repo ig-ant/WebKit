@@ -149,6 +149,7 @@ $doNotMessWithVMPath = false
 $cloop = false
 $jitTests = true
 $memoryLimited = false
+$structsOverride = nil
 $outputDir = Pathname.new("results")
 $verbosity = 0
 $bundle = nil
@@ -190,6 +191,8 @@ def usage
     puts "--platform                  Indicate the target platform we are running on."
     puts "--memory-limited            Indicate that we are targeting the test for a memory limited device."
     puts "                            Skip tests tagged with //@skip if $memoryLimited"
+    puts "--structs, --no-structs     Indicate whether jsc was built with ENABLE(JS_STRUCTS). By default, jsc is"
+    puts "                            asked, except with --remote and --tarball, which skip all tests of structs."
     puts "--no-jit                    Do not run JIT specific tests."
     puts "--force-collectContinuously Enable the collectContinuously mode even if disabled on this"
     puts "                            platform."
@@ -240,6 +243,8 @@ GetoptLong.new(['--help', '-h', GetoptLong::NO_ARGUMENT],
                ['--cloop', GetoptLong::NO_ARGUMENT],
                ['--platform', GetoptLong::REQUIRED_ARGUMENT],
                ['--memory-limited', GetoptLong::NO_ARGUMENT],
+               ['--structs', GetoptLong::NO_ARGUMENT],
+               ['--no-structs', GetoptLong::NO_ARGUMENT],
                ['--no-jit', GetoptLong::NO_ARGUMENT],
                ['--force-collectContinuously', GetoptLong::NO_ARGUMENT],
                ['--output-dir', '-o', GetoptLong::REQUIRED_ARGUMENT],
@@ -290,6 +295,10 @@ GetoptLong.new(['--help', '-h', GetoptLong::NO_ARGUMENT],
         $platform = arg
     when '--memory-limited'
         $memoryLimited = true
+    when '--structs'
+        $structsOverride = true
+    when '--no-structs'
+        $structsOverride = false
     when '--no-jit'
         $jitTests = false
     when '--force-collectContinuously'
@@ -843,31 +852,39 @@ def vmCommand
     vmInvocationPrefix + [pathToVM.to_s]
 end
 
-def determineAssertionsEnabled
+# Returns nil if jsc could not be asked.
+def queryVM(expression, *options)
     # A tarball's jsc runs on another machine and may not be runnable here.
-    return $buildType == "debug" if $tarball
+    return nil if $tarball
 
     begin
-        command = vmInvocationPrefix + [$jscPath.to_s, "--useDollarVM=true", "-e", 'print($vm.assertEnabled())']
+        command = vmInvocationPrefix + [$jscPath.to_s, *options, "-e", "print(#{expression})"]
         output = IO.popen(command, :err => File::NULL) { |io| io.read }
-        raise "VM exited with #{$?.exitstatus}" unless $?.success?
+        raise "VM exited with #{$?.exitstatus || $?}" unless $?.success?
         answer = output.split("\n").map(&:strip).reject(&:empty?).last
         raise "unexpected answer #{answer.inspect}" unless ["true", "false"].include?(answer)
         return answer == "true"
     rescue => e
-        $stderr.puts "Warning: determineAssertionsEnabled failed (#{e.message}), assuming assertions are #{$buildType == "debug" ? "enabled" : "disabled"}"
-        return $buildType == "debug"
+        $stderr.puts "Warning: failed to evaluate #{expression} (#{e.message})"
+        return nil
     end
+end
+
+def determineAssertionsEnabled
+    answer = queryVM("$vm.assertEnabled()", "--useDollarVM=true")
+    return answer unless answer.nil?
+    $stderr.puts "Warning: assuming assertions are #{$buildType == "debug" ? "enabled" : "disabled"}" unless $tarball
+    $buildType == "debug"
 end
 
 $assertionsEnabled = determineAssertionsEnabled
 
+# nil means unknown: neither the tests that need structs nor the ones that need them compiled out can run.
 def determineStructsEnabled
-    # A tarball's jsc runs on another machine and may not be runnable here.
-    return false if $tarball
-
-    command = vmInvocationPrefix + [$jscPath.to_s, "--useStructs=true", "-e", "struct S { }"]
-    !!system(*command, :out => File::NULL, :err => File::NULL)
+    return $structsOverride unless $structsOverride.nil?
+    answer = queryVM('(() => { try { Function("struct S { }"); return true; } catch { return false; } })()', "--useStructs=true")
+    $stderr.puts "Warning: skipping tests of structs, use --structs or --no-structs" if answer.nil?
+    answer
 end
 
 $structsEnabled = determineStructsEnabled

@@ -72,6 +72,7 @@ my $gnuParallelChunkSize;
 my $testWriter;
 my $fullConfiguration;
 my $memoryLimited;
+my $structs;
 my $reportExecutionTime;
 my $treatFailingAsFlaky;
 
@@ -331,6 +332,7 @@ Usage: $programName [options] [options to pass to build system]
 
   --memory-limited              Indicate that we are targeting the test for a memory limited device.
                                 Skip tests tagged with //\@skip if \$memoryLimited
+  --[no-]structs                Indicate whether jsc was built with ENABLE(JS_STRUCTS).
 
   --report-execution-time       Print execution time for each stress test.
   --treat-failing-as-flaky      Treat failing stress tests as flaky.
@@ -416,6 +418,7 @@ GetOptions(
     'gnu-parallel-chunk-size=s' => \$gnuParallelChunkSize,
     'test-writer=s' => \$testWriter,
     'memory-limited' => \$memoryLimited,
+    'structs!' => \$structs,
     'report-execution-time' => \$reportExecutionTime,
     'treat-failing-as-flaky=s' => \$treatFailingAsFlaky,
     'filter=s' => \$filter,
@@ -1056,6 +1059,10 @@ sub runJSCStressTests
 
     if ($memoryLimited) {
         push(@jscStressDriverCmd, "--memory-limited");
+    }
+
+    if (defined($structs)) {
+        push(@jscStressDriverCmd, $structs ? "--structs" : "--no-structs");
     }
 
     if ($reportExecutionTime) {
