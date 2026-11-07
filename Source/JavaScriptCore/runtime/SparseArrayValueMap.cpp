@@ -59,7 +59,7 @@ Structure* SparseArrayValueMap::createStructure(VM& vm, JSGlobalObject* globalOb
     return Structure::create(vm, globalObject, prototype, TypeInfo(CellType, StructureFlags), info());
 }
 
-SparseArrayValueMap::AddResult SparseArrayValueMap::add(JSCell* owner, unsigned i)
+SparseArrayValueMap::AddResult SparseArrayValueMap::add(unsigned i)
 {
     AddResult addResult;
     size_t increasedCapacity = 0;
@@ -75,7 +75,7 @@ SparseArrayValueMap::AddResult SparseArrayValueMap::add(JSCell* owner, unsigned 
         }
     }
     if (increasedCapacity)
-        Heap::heap(owner)->reportExtraMemoryAllocated(owner, increasedCapacity * sizeof(SparseArrayEntry));
+        Heap::heap(this)->reportExtraMemoryAllocated(this, increasedCapacity * sizeof(SparseArrayEntry));
     return addResult;
 }
 
@@ -99,7 +99,7 @@ bool SparseArrayValueMap::putEntry(JSGlobalObject* globalObject, JSObject* array
     auto scope = DECLARE_THROW_SCOPE(vm);
     ASSERT(value);
 
-    AddResult result = add(array, i);
+    AddResult result = add(i);
     SparseArrayEntry& entry = *result.iterator;
 
     // To save a separate find & add, we first always add to the sparse map.
@@ -121,7 +121,7 @@ bool SparseArrayValueMap::putDirect(JSGlobalObject* globalObject, JSObject* arra
     
     bool shouldThrow = (mode == PutDirectIndexShouldThrow);
 
-    AddResult result = add(array, i);
+    AddResult result = add(i);
     SparseArrayEntry& entry = *result.iterator;
 
     // To save a separate find & add, we first always add to the sparse map.

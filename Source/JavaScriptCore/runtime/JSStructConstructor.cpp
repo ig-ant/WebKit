@@ -121,7 +121,7 @@ JSObject* JSStructConstructor::createInstance(VM& vm)
         EnsureStillAliveScope keepAlive { map };
         map->setSparseMode();
         for (uint32_t index : indexedFields)
-            map->add(map, index).iterator->forceSet(vm, map, jsUndefined(), static_cast<unsigned>(PropertyAttribute::DontDelete));
+            map->add(index).iterator->forceSet(vm, map, jsUndefined(), static_cast<unsigned>(PropertyAttribute::DontDelete));
         Butterfly* butterfly = createArrayStorageButterfly(vm, nullptr, structure, indexedFields.last() + 1, 0);
         result = JSFinalObject::createWithButterfly(vm, structure, butterfly);
         butterfly->arrayStorage()->m_sparseMap.set(vm, result, map);

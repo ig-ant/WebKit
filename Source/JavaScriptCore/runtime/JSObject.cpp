@@ -1205,7 +1205,7 @@ ArrayStorage* JSObject::enterDictionaryIndexingModeWhenArrayStorageAlreadyExists
         // This will always be a new entry in the map, so no need to check we can write,
         // and attributes are default so no need to set them.
         if (value)
-            map->add(this, i).iterator->forceSet(vm, map, value, 0);
+            map->add(i).iterator->forceSet(vm, map, value, 0);
     }
 
     DeferGC deferGC(vm);
@@ -3136,7 +3136,7 @@ bool JSObject::defineOwnIndexedProperty(JSGlobalObject* globalObject, unsigned i
     RELEASE_ASSERT(map);
     
     // 1. Let current be the result of calling the [[GetOwnProperty]] internal method of O with property name P.
-    SparseArrayValueMap::AddResult result = map->add(this, index);
+    SparseArrayValueMap::AddResult result = map->add(index);
     SparseArrayEntry* entryInMap = &*result.iterator;
 
     // 2. Let extensible be the value of the [[Extensible]] internal property of O.
