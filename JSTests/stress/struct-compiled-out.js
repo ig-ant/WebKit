@@ -17,6 +17,8 @@ function shouldThrowSyntaxError(source) {
         throw new Error(`${source} should be a SyntaxError`);
 }
 
+shouldBe(jscOptions().useStructs ? true : false, false);
+
 shouldThrowSyntaxError("struct A { }");
 shouldThrowSyntaxError("struct A extends null { x; }");
 shouldThrowSyntaxError("{ struct A { } }");
