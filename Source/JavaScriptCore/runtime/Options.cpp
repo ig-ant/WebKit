@@ -836,6 +836,9 @@ void Options::notifyOptionsChanged()
 #if !ENABLE(FTL_JIT)
     Options::useFTLJIT() = false;
 #endif
+#if !ENABLE(JS_STRUCTS)
+    Options::useStructs() = false;
+#endif
 
 #if CPU(RISCV64)
     // On RISCV64, JIT levels are enabled at build-time to simplify building JSC, avoiding
