@@ -1,5 +1,7 @@
 //@ skip if !$structsEnabled
 //@ requireOptions("--useStructs=1")
+if (jscOptions().useStructs) {
+    loadString(`
 struct Base { a = 1; b; constructor(b) { this.b = b; } }
 struct Derived extends Base { c = 2; d; constructor(b, d) { super(b); this.d = d; } sum() { return this.a + this.b + this.c + this.d; } }
 function test(n) {
@@ -12,4 +14,6 @@ noInline(test);
 for (let i = 0; i < 200; ++i) {
     if (test(5000) !== 25010000)
         throw new Error("bad result");
+}
+`);
 }

@@ -1,5 +1,7 @@
 //@ skip if !$structsEnabled
 //@ requireOptions("--useStructs=1")
+if (jscOptions().useStructs) {
+    loadString(`
 struct ListNode { value; next = null; constructor(value) { this.value = value; } }
 function test(n) {
     let head = null;
@@ -17,4 +19,6 @@ noInline(test);
 for (let i = 0; i < 200; ++i) {
     if (test(5000) !== 12497500)
         throw new Error("bad result");
+}
+`);
 }

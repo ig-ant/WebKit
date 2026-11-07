@@ -1,5 +1,7 @@
 //@ skip if !$structsEnabled
 //@ requireOptions("--useStructs=1")
+if (jscOptions().useStructs) {
+    loadString(`
 struct Counter {
     a = 0; b = 1; c = 2;
     step(n) { this.a += n; this.b += this.a & 3; this.c = this.a - this.b; return this.c; }
@@ -15,4 +17,6 @@ noInline(test);
 for (let i = 0; i < 200; ++i) {
     if (test(10000) !== 99947500)
         throw new Error("bad result");
+}
+`);
 }

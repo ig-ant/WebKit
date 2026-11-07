@@ -1,5 +1,7 @@
 //@ skip if !$structsEnabled
 //@ requireOptions("--useStructs=1")
+if (jscOptions().useStructs) {
+    loadString(`
 struct Vec2 {
     x; y;
     constructor(x, y) { this.x = x; this.y = y; }
@@ -17,4 +19,6 @@ noInline(test);
 for (let i = 0; i < 200; ++i) {
     if (test(10000) !== 50035000)
         throw new Error("bad result");
+}
+`);
 }

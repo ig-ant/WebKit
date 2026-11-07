@@ -1,5 +1,7 @@
 //@ skip if !$structsEnabled
 //@ requireOptions("--useStructs=1")
+if (jscOptions().useStructs) {
+    loadString(`
 struct Vec3 { x; y; z; constructor(x, y, z) { this.x = x; this.y = y; this.z = z; } }
 function test(n) {
     let last;
@@ -11,4 +13,6 @@ noInline(test);
 for (let i = 0; i < 200; ++i) {
     if (test(10000).x !== 9999)
         throw new Error("bad result");
+}
+`);
 }
