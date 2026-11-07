@@ -1,4 +1,5 @@
 //@ skip if !$structsEnabled
+//@ slow!
 //@ requireOptions("--useStructs=1")
 
 function shouldBe(actual, expected) {
