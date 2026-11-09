@@ -47,16 +47,16 @@ BuiltinExecutables::BuiltinExecutables(VM& vm)
 {
 }
 
-SourceCode BuiltinExecutables::defaultConstructorSourceCode(ConstructorKind constructorKind)
+SourceCode BuiltinExecutables::defaultConstructorSourceCode(ConstructorKind constructorKind, bool isStruct)
 {
+    // The default constructor of a struct does not call the one of its parent.
+    if (isStruct && constructorKind == ConstructorKind::Extends)
+        constructorKind = ConstructorKind::Base;
+
     switch (constructorKind) {
     case ConstructorKind::None:
     case ConstructorKind::Naked:
         break;
-#if ENABLE(JS_STRUCTS)
-    case ConstructorKind::StructBase:
-    case ConstructorKind::StructExtends:
-#endif
     case ConstructorKind::Base: {
         static NeverDestroyed<const String> baseConstructorCode(MAKE_STATIC_STRING_IMPL("(function () { })"));
         return makeSource(baseConstructorCode, { }, SourceTaintedOrigin::Untainted);
@@ -70,7 +70,7 @@ SourceCode BuiltinExecutables::defaultConstructorSourceCode(ConstructorKind cons
     return SourceCode();
 }
 
-UnlinkedFunctionExecutable* BuiltinExecutables::createDefaultConstructor(ConstructorKind constructorKind, const Identifier& name, NeedsClassFieldInitializer needsClassFieldInitializer, PrivateBrandRequirement privateBrandRequirement)
+UnlinkedFunctionExecutable* BuiltinExecutables::createDefaultConstructor(ConstructorKind constructorKind, const Identifier& name, NeedsClassFieldInitializer needsClassFieldInitializer, PrivateBrandRequirement privateBrandRequirement, bool isStruct, ConstructAbility constructAbility)
 {
     switch (constructorKind) {
     case ConstructorKind::None:
@@ -78,12 +78,7 @@ UnlinkedFunctionExecutable* BuiltinExecutables::createDefaultConstructor(Constru
         break;
     case ConstructorKind::Base:
     case ConstructorKind::Extends:
-#if ENABLE(JS_STRUCTS)
-    case ConstructorKind::StructBase:
-    case ConstructorKind::StructExtends:
-#endif
-        return createExecutable(m_vm, defaultConstructorSourceCode(constructorKind), name, ImplementationVisibility::Public, constructorKind,
-            isStructInitializer(privateBrandRequirement) ? ConstructAbility::CannotConstruct : ConstructAbility::CanConstruct, InlineAttribute::Always, needsClassFieldInitializer, privateBrandRequirement);
+        return createExecutable(m_vm, defaultConstructorSourceCode(constructorKind, isStruct), name, ImplementationVisibility::Public, constructorKind, constructAbility, InlineAttribute::Always, needsClassFieldInitializer, privateBrandRequirement, isStruct);
     }
     ASSERT_NOT_REACHED();
     return nullptr;
@@ -183,15 +178,15 @@ static BuiltinSourceMetadata computeBuiltinSourceMetadata(std::span<const Latin1
     return result;
 }
 
-UnlinkedFunctionExecutable* BuiltinExecutables::createExecutable(VM& vm, const SourceCode& source, const Identifier& name, ImplementationVisibility implementationVisibility, ConstructorKind constructorKind, ConstructAbility constructAbility, InlineAttribute inlineAttribute, NeedsClassFieldInitializer needsClassFieldInitializer, PrivateBrandRequirement privateBrandRequirement)
+UnlinkedFunctionExecutable* BuiltinExecutables::createExecutable(VM& vm, const SourceCode& source, const Identifier& name, ImplementationVisibility implementationVisibility, ConstructorKind constructorKind, ConstructAbility constructAbility, InlineAttribute inlineAttribute, NeedsClassFieldInitializer needsClassFieldInitializer, PrivateBrandRequirement privateBrandRequirement, bool isStruct)
 {
     StringView view = source.view();
     RELEASE_ASSERT(!view.isNull());
     RELEASE_ASSERT(view.is8Bit());
-    return createExecutable(vm, source, computeBuiltinSourceMetadata(view.span8()), name, implementationVisibility, constructorKind, constructAbility, inlineAttribute, needsClassFieldInitializer, privateBrandRequirement);
+    return createExecutable(vm, source, computeBuiltinSourceMetadata(view.span8()), name, implementationVisibility, constructorKind, constructAbility, inlineAttribute, needsClassFieldInitializer, privateBrandRequirement, isStruct);
 }
 
-UnlinkedFunctionExecutable* BuiltinExecutables::createExecutable(VM& vm, const SourceCode& source, const BuiltinSourceMetadata& scanned, const Identifier& name, ImplementationVisibility implementationVisibility, ConstructorKind constructorKind, ConstructAbility constructAbility, InlineAttribute inlineAttribute, NeedsClassFieldInitializer needsClassFieldInitializer, PrivateBrandRequirement privateBrandRequirement)
+UnlinkedFunctionExecutable* BuiltinExecutables::createExecutable(VM& vm, const SourceCode& source, const BuiltinSourceMetadata& scanned, const Identifier& name, ImplementationVisibility implementationVisibility, ConstructorKind constructorKind, ConstructAbility constructAbility, InlineAttribute inlineAttribute, NeedsClassFieldInitializer needsClassFieldInitializer, PrivateBrandRequirement privateBrandRequirement, bool isStruct)
 {
     StringView view = source.view();
     RELEASE_ASSERT(scanned.sourceLength == view.length());
@@ -217,11 +212,12 @@ UnlinkedFunctionExecutable* BuiltinExecutables::createExecutable(VM& vm, const S
 
     FunctionMetadataNode metadata(
         start, end, source.startOffset() + functionKeywordStart, source.startOffset() + functionNameStart, source.startOffset() + parametersStart, implementationVisibility,
-        scanned.isInStrictContext ? StrictModeLexicallyScopedFeature : NoLexicallyScopedFeatures, constructorKind, constructorKind == ConstructorKind::Extends ? SuperBinding::Needed : SuperBinding::NotNeeded,
+        scanned.isInStrictContext ? StrictModeLexicallyScopedFeature : NoLexicallyScopedFeatures, constructorKind, constructorKind == ConstructorKind::Extends && !isStruct ? SuperBinding::Needed : SuperBinding::NotNeeded,
         scanned.parameterCount, parseMode, isArrowFunctionBodyExpression);
 
     metadata.finishParsing(newSource, Identifier(), FunctionMode::FunctionExpression);
     metadata.overrideName(name);
+    metadata.setIsStruct(isStruct);
 
     if (ASSERT_ENABLED || Options::validateBytecode()) [[unlikely]] {
         ParserError error;
@@ -247,6 +243,9 @@ UnlinkedFunctionExecutable* BuiltinExecutables::createExecutable(VM& vm, const S
             // This function assumes an input string that would result in a single anonymous function expression.
             RELEASE_ASSERT(metadataFromParser);
             metadataFromParser->overrideName(name);
+            // The parser expects every derived constructor to need a super binding.
+            if (isStruct)
+                metadataFromParser->m_superBinding = metadata.m_superBinding;
             if (metadata != *metadataFromParser) {
                 dataLogLn("Expected Metadata:\n", metadata);
                 dataLogLn("Metadata from parser:\n", *metadataFromParser);

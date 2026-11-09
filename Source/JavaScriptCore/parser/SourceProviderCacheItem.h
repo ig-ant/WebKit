@@ -106,7 +106,7 @@ public:
     bool isBodyArrowExpression : 1;
     unsigned tokenType : 24; // JSTokenType
     unsigned innerArrowFunctionFeatures : 6; // InnerArrowFunctionCodeFeatures
-    unsigned constructorKind : 3; // ConstructorKind
+    unsigned constructorKind : 2; // ConstructorKind
     unsigned implementationVisibility : 2; // ImplementationVisibility
     bool usesImportMeta : 1 { false };
 

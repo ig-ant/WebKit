@@ -2346,7 +2346,7 @@ NODELETE static ALWAYS_INLINE SuperBinding adjustSuperBindingForBaseConstructor(
             return SuperBinding::Needed;
     }
 
-    if (constructorKind == ConstructorKind::None || isBaseConstructorKind(constructorKind)) {
+    if (constructorKind == ConstructorKind::None || constructorKind == ConstructorKind::Base) {
         bool isSuperUsedInInnerArrowFunction = innerArrowFunctionFeatures & SuperPropertyInnerArrowFunctionFeature;
         return (scopeNeedsSuperBinding || isSuperUsedInInnerArrowFunction || currentScopeUsesEval) ? SuperBinding::Needed : SuperBinding::NotNeeded;
     }
@@ -3140,11 +3140,7 @@ template <class TreeBuilder> TreeClassExpression Parser<LexerType>::parseClass(T
         parentClass = parseMemberExpression(context);
         failIfFalse(parentClass, "Cannot parse the parent class name");
     }
-    ConstructorKind constructorKind = parentClass ? ConstructorKind::Extends : ConstructorKind::Base;
-#if ENABLE(JS_STRUCTS)
-    if (info.isStruct)
-        constructorKind = parentClass ? ConstructorKind::StructExtends : ConstructorKind::StructBase;
-#endif
+    const ConstructorKind constructorKind = parentClass ? ConstructorKind::Extends : ConstructorKind::Base;
 
     JSTextPosition classHeadEnd = lastTokenEndPosition();
     consumeOrFail(OPENBRACE, "Expected opening '{' at the start of a class body");
@@ -5697,7 +5693,7 @@ template <class TreeBuilder> TreeExpression Parser<LexerType>::parseMemberExpres
                         // inside of the constructor or method.
                         if (!m_lexer->isReparsingFunction()) {
                             Scope* closestOrdinaryFunctionScope = closestParentOrdinaryFunctionNonLexicalScope();
-                            semanticFailIfFalse(isDerivedConstructorKind(closestOrdinaryFunctionScope->constructorKind()) || (closestOrdinaryFunctionScope->isEvalContext() && closestOrdinaryFunctionScope->derivedContextType() == DerivedContextType::DerivedConstructorContext), "super is not valid in this context");
+                            semanticFailIfFalse(closestOrdinaryFunctionScope->constructorKind() == ConstructorKind::Extends || (closestOrdinaryFunctionScope->isEvalContext() && closestOrdinaryFunctionScope->derivedContextType() == DerivedContextType::DerivedConstructorContext), "super is not valid in this context");
                         }
                         if (currentScope()->isArrowFunction())
                             functionScope->setInnerArrowFunctionUsesSuperCall();

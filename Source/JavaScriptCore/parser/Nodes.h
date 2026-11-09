@@ -2232,6 +2232,11 @@ namespace JSC {
         void setPrivateBrandRequirement(PrivateBrandRequirement privateBrandRequirement) { m_privateBrandRequirement = static_cast<unsigned>(privateBrandRequirement); }
         PrivateBrandRequirement privateBrandRequirement() { return static_cast<PrivateBrandRequirement>(m_privateBrandRequirement); }
 
+        bool isStruct() const { return m_isStruct; }
+        void setIsStruct(bool isStruct) { m_isStruct = isStruct; }
+        bool isStructInitializer() const { return m_isStructInitializer; }
+        void setIsStructInitializer(bool isStructInitializer) { m_isStructInitializer = isStructInitializer; }
+
         FunctionMode functionMode() { return m_functionMode; }
 
         int functionNameStart() const { return m_functionNameStart; }
@@ -2267,11 +2272,13 @@ namespace JSC {
         unsigned m_implementationVisibility : bitWidthOfImplementationVisibility;
         LexicallyScopedFeatures m_lexicallyScopedFeatures : bitWidthOfLexicallyScopedFeatures;
         unsigned m_superBinding : 1;
-        unsigned m_constructorKind : 3;
+        unsigned m_constructorKind : 2;
         unsigned m_needsClassFieldInitializer : 1;
         unsigned m_isArrowFunctionBodyExpression : 1;
         unsigned m_isSloppyModeHoistedFunction : 1 { 0 };
-        unsigned m_privateBrandRequirement : 3;
+        unsigned m_privateBrandRequirement : 1;
+        unsigned m_isStruct : 1 { 0 };
+        unsigned m_isStructInitializer : 1 { 0 };
         SourceParseMode m_parseMode;
         FunctionMode m_functionMode;
         Identifier m_ident;
@@ -2301,11 +2308,15 @@ namespace JSC {
 
         FunctionMode functionMode() const { return m_functionMode; }
 
+        bool isStructInitializer() const { return m_isStructInitializer; }
+        void setIsStructInitializer(bool isStructInitializer) { m_isStructInitializer = isStructInitializer; }
+
         static constexpr bool scopeIsFunction = true;
 
     private:
         Identifier m_ident;
         FunctionMode m_functionMode;
+        bool m_isStructInitializer { false };
         FunctionParameters* m_parameters;
     };
 

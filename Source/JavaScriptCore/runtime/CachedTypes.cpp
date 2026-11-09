@@ -1057,7 +1057,7 @@ private:
     CachedVector<CachedBitVector> m_bitVectors;
     CachedVector<CachedHashSet<CachedRefPtr<CachedUniquedStringImpl>, IdentifierRepHash>> m_constantIdentifierSets;
     unsigned m_needsClassFieldInitializer : 1;
-    unsigned m_privateBrandRequirement : 3;
+    unsigned m_privateBrandRequirement : 1;
 };
 
 class CachedExpressionInfo : public CachedObject<ExpressionInfo> {
@@ -1924,6 +1924,7 @@ public:
     NODELETE unsigned inlineAttribute() const { return m_inlineAttribute; }
     NODELETE unsigned needsClassFieldInitializer() const { return m_needsClassFieldInitializer; }
     NODELETE unsigned privateBrandRequirement() const { return m_privateBrandRequirement; }
+    NODELETE unsigned isStruct() const { return m_isStruct; }
     NODELETE unsigned hasName() const { return m_hasName; }
 
     Identifier ecmaName(Decoder& decoder) const { return m_ecmaName.decode(decoder); }
@@ -1948,9 +1949,10 @@ private:
     unsigned m_parametersStartOffset : 31;
     unsigned m_unlinkedFunctionEnd;
     unsigned m_parameterCount:31;
-    unsigned m_privateBrandRequirement : 3;
+    unsigned m_privateBrandRequirement : 1;
+    unsigned m_isStruct : 1;
     SourceParseMode m_sourceParseMode;
-    unsigned m_constructorKind : 3;
+    unsigned m_constructorKind : 2;
     unsigned m_functionMode : 2; // FunctionMode
     unsigned m_derivedContextType: 2;
     unsigned m_evalContextType : 2;
@@ -2007,6 +2009,7 @@ public:
     NODELETE unsigned derivedContextType() const { return m_derivedContextType; }
     NODELETE unsigned evalContextType() const { return m_evalContextType; }
     NODELETE unsigned hasTailCalls() const { return m_hasTailCalls; }
+    NODELETE unsigned isStruct() const { return m_isStruct; }
     NODELETE unsigned hasCheckpoints() const { return m_hasCheckpoints; }
 
     NODELETE int numVars() const { return m_numVars; }
@@ -2035,10 +2038,11 @@ private:
     unsigned m_scriptMode: 1;
     unsigned m_isArrowFunctionContext : 1;
     unsigned m_isClassContext : 1;
-    unsigned m_constructorKind : 3;
+    unsigned m_constructorKind : 2;
     unsigned m_derivedContextType : 2;
     unsigned m_evalContextType : 2;
     unsigned m_hasTailCalls : 1;
+    unsigned m_isStruct : 1;
     unsigned m_codeType : 2;
     unsigned m_hasCheckpoints : 1;
 
@@ -2267,6 +2271,7 @@ ALWAYS_INLINE UnlinkedCodeBlock::UnlinkedCodeBlock(Decoder& decoder, Structure* 
     , m_isArrowFunctionContext(cachedCodeBlock.isArrowFunctionContext())
     , m_isClassContext(cachedCodeBlock.isClassContext())
     , m_hasTailCalls(cachedCodeBlock.hasTailCalls())
+    , m_isStruct(cachedCodeBlock.isStruct())
     , m_constructorKind(cachedCodeBlock.constructorKind())
     , m_derivedContextType(cachedCodeBlock.derivedContextType())
     , m_evalContextType(cachedCodeBlock.evalContextType())
@@ -2344,6 +2349,7 @@ ALWAYS_INLINE void CachedFunctionExecutable::encode(Encoder& encoder, const Unli
     m_needsClassFieldInitializer = executable.m_needsClassFieldInitializer;
     m_implementationVisibility = executable.m_implementationVisibility;
     m_privateBrandRequirement = executable.m_privateBrandRequirement;
+    m_isStruct = executable.m_isStruct;
     m_hasName = executable.m_hasName;
 
     m_rareData.encode(encoder, executable.m_rareData.get());
@@ -2384,6 +2390,7 @@ ALWAYS_INLINE UnlinkedFunctionExecutable::UnlinkedFunctionExecutable(Decoder& de
     , m_isBuiltinFunction(cachedExecutable.isBuiltinFunction())
     , m_isBuiltinDefaultClassConstructor(cachedExecutable.isBuiltinDefaultClassConstructor())
     , m_privateBrandRequirement(cachedExecutable.privateBrandRequirement())
+    , m_isStruct(cachedExecutable.isStruct())
     , m_features(cachedExecutable.features())
     , m_constructorKind(cachedExecutable.constructorKind())
     , m_sourceParseMode(cachedExecutable.sourceParseMode())
@@ -2444,6 +2451,7 @@ ALWAYS_INLINE void CachedCodeBlock<CodeBlockType>::encode(Encoder& encoder, cons
     m_isArrowFunctionContext = codeBlock.m_isArrowFunctionContext;
     m_isClassContext = codeBlock.m_isClassContext;
     m_hasTailCalls = codeBlock.m_hasTailCalls;
+    m_isStruct = codeBlock.m_isStruct;
     m_constructorKind = codeBlock.m_constructorKind;
     m_derivedContextType = codeBlock.m_derivedContextType;
     m_evalContextType = codeBlock.m_evalContextType;

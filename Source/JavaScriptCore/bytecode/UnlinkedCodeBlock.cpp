@@ -56,6 +56,7 @@ UnlinkedCodeBlock::UnlinkedCodeBlock(VM& vm, Structure* structure, CodeType code
     , m_isArrowFunctionContext(info.isArrowFunctionContext())
     , m_isClassContext(info.isClassContext())
     , m_hasTailCalls(false)
+    , m_isStruct(info.isStruct())
     , m_constructorKind(static_cast<unsigned>(info.constructorKind()))
     , m_derivedContextType(static_cast<unsigned>(info.derivedContextType()))
     , m_evalContextType(static_cast<unsigned>(info.evalContextType()))
@@ -73,10 +74,10 @@ UnlinkedCodeBlock::UnlinkedCodeBlock(VM& vm, Structure* structure, CodeType code
         createRareDataIfNecessary(locker);
         m_rareData->m_needsClassFieldInitializer = static_cast<unsigned>(NeedsClassFieldInitializer::Yes);
     }
-    if (info.privateBrandRequirement() != PrivateBrandRequirement::None) {
+    if (info.privateBrandRequirement() == PrivateBrandRequirement::Needed) {
         Locker locker { cellLock() };
         createRareDataIfNecessary(locker);
-        m_rareData->m_privateBrandRequirement = static_cast<unsigned>(info.privateBrandRequirement());
+        m_rareData->m_privateBrandRequirement = static_cast<unsigned>(PrivateBrandRequirement::Needed);
     }
 
     m_llintExecuteCounter.setNewThreshold(thresholdForJIT(Options::thresholdForJITAfterWarmUp()));

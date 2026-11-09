@@ -5350,7 +5350,7 @@ void FunctionNode::emitBytecode(BytecodeGenerator& generator, RegisterID*)
     generator.emitDebugHook(DidEnterCallFrame, JSTextPosition(startStartOffset()));
 
 #if ENABLE(JS_STRUCTS)
-    if (generator.privateBrandRequirement() == PrivateBrandRequirement::StructFieldInitializer && generator.isDerivedClassContext()) {
+    if (generator.isStructFieldInitializer() && generator.isDerivedClassContext()) {
         RegisterID callee;
         callee.setIndex(CallFrameSlot::callee);
         RefPtr<RegisterID> parentInitializer = generator.emitDirectGetById(generator.newTemporary(), &callee, generator.propertyNames().builtinNames().instanceFieldInitializerPrivateName());
@@ -5754,7 +5754,7 @@ void DefineFieldNode::emitBytecode(BytecodeGenerator& generator, RegisterID*)
             generator.emitSetFunctionName(value.get(), m_ident);
     }
 
-    bool isStructField = isStructFieldInitializer(generator.privateBrandRequirement());
+    bool isStructField = generator.isStructFieldInitializer();
 
     switch (m_type) {
     case DefineFieldNode::Type::Name: {
@@ -5970,23 +5970,24 @@ RegisterID* ClassExprNode::emitStructBytecode(BytecodeGenerator& generator, Regi
     if (m_classElements)
         m_classElements->markInstanceMethodsAsStructMethods();
 
-    auto constructorKind = m_classHeritage ? ConstructorKind::StructExtends : ConstructorKind::StructBase;
+    auto constructorKind = m_classHeritage ? ConstructorKind::Extends : ConstructorKind::Base;
     auto needsClassFieldInitializer = m_classHeritage || (m_classElements && m_classElements->hasInstanceFieldsWithInitializer()) ? NeedsClassFieldInitializer::Yes : NeedsClassFieldInitializer::No;
-    auto emitConstructor = [&](PrivateBrandRequirement privateBrandRequirement, NeedsClassFieldInitializer needsClassFieldInitializer) -> RefPtr<RegisterID> {
+    auto emitConstructor = [&](bool isInitializer, NeedsClassFieldInitializer needsClassFieldInitializer) -> RefPtr<RegisterID> {
         RefPtr<RegisterID> result = generator.newTemporary();
         if (!m_constructorExpression)
-            return generator.emitNewDefaultConstructor(result.get(), constructorKind, m_name, ecmaName(), m_classSource, needsClassFieldInitializer, privateBrandRequirement);
+            return generator.emitNewDefaultConstructor(result.get(), constructorKind, m_name, ecmaName(), m_classSource, needsClassFieldInitializer, PrivateBrandRequirement::None, true, isInitializer ? ConstructAbility::CannotConstruct : ConstructAbility::CanConstruct);
 
         ASSERT(m_constructorExpression->isFuncExprNode());
         FunctionMetadataNode* metadata = static_cast<FuncExprNode*>(m_constructorExpression)->metadata();
         metadata->setEcmaName(ecmaName());
         metadata->setClassSource(m_classSource);
         metadata->setNeedsClassFieldInitializer(needsClassFieldInitializer == NeedsClassFieldInitializer::Yes);
-        metadata->setPrivateBrandRequirement(privateBrandRequirement);
+        metadata->setIsStruct(true);
+        metadata->setIsStructInitializer(isInitializer);
         return generator.emitNode(result.get(), m_constructorExpression);
     };
-    RefPtr<RegisterID> initializer = emitConstructor(PrivateBrandRequirement::StructInitializer, NeedsClassFieldInitializer::No);
-    RefPtr<RegisterID> constructorTemplate = emitConstructor(PrivateBrandRequirement::StructConstructor, needsClassFieldInitializer);
+    RefPtr<RegisterID> initializer = emitConstructor(true, NeedsClassFieldInitializer::No);
+    RefPtr<RegisterID> constructorTemplate = emitConstructor(false, needsClassFieldInitializer);
 
     RefPtr<RegisterID> hasHeritage = generator.emitLoad(nullptr, jsBoolean(!!m_classHeritage));
     RefPtr<RegisterID> undefined = generator.emitLoad(nullptr, jsUndefined());
@@ -6038,7 +6039,7 @@ RegisterID* ClassExprNode::emitStructBytecode(BytecodeGenerator& generator, Regi
             return !definition.initializerPosition;
         });
         if (!instanceElementDefinitions.isEmpty()) {
-            fieldInitializer = generator.emitNewClassFieldInitializerFunction(generator.newTemporary(), WTF::move(instanceElementDefinitions), m_classHeritage, PrivateBrandRequirement::StructFieldInitializer);
+            fieldInitializer = generator.emitNewClassFieldInitializerFunction(generator.newTemporary(), WTF::move(instanceElementDefinitions), m_classHeritage, true);
             emitPutHomeObject(generator, fieldInitializer.get(), prototype.get());
         }
     }

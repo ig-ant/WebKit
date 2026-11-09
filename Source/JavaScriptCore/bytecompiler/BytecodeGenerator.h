@@ -382,6 +382,7 @@ namespace JSC {
         LexicallyScopedFeatures lexicallyScopedFeatures() const { return m_scopeNode->lexicallyScopedFeatures(); }
         PrivateBrandRequirement privateBrandRequirement() const { return m_codeBlock->privateBrandRequirement(); }
         ConstructorKind constructorKind() const { return m_codeBlock->constructorKind(); }
+        bool isStruct() const { return m_codeBlock->isStruct(); }
         SuperBinding superBinding() const { return m_codeBlock->superBinding(); }
         JSParserScriptMode scriptMode() const { return m_codeBlock->scriptMode(); }
         NeedsClassFieldInitializer needsClassFieldInitializer() const { return m_codeBlock->needsClassFieldInitializer(); }
@@ -779,8 +780,8 @@ namespace JSC {
 
         RegisterID* emitNewFunction(RegisterID* dst, FunctionMetadataNode*);
         RegisterID* emitNewFunctionExpression(RegisterID* dst, FuncExprNode*);
-        RegisterID* emitNewDefaultConstructor(RegisterID* dst, ConstructorKind, const Identifier& name, const Identifier& ecmaName, const SourceCode& classSource, NeedsClassFieldInitializer, PrivateBrandRequirement);
-        RegisterID* emitNewClassFieldInitializerFunction(RegisterID* dst, Vector<UnlinkedFunctionExecutable::ClassElementDefinition>&&, bool isDerived, PrivateBrandRequirement = PrivateBrandRequirement::None);
+        RegisterID* emitNewDefaultConstructor(RegisterID* dst, ConstructorKind, const Identifier& name, const Identifier& ecmaName, const SourceCode& classSource, NeedsClassFieldInitializer, PrivateBrandRequirement, bool isStruct = false, ConstructAbility = ConstructAbility::CanConstruct);
+        RegisterID* emitNewClassFieldInitializerFunction(RegisterID* dst, Vector<UnlinkedFunctionExecutable::ClassElementDefinition>&&, bool isDerived, bool isStruct = false);
         RegisterID* emitNewArrowFunctionExpression(RegisterID*, ArrowFuncExprNode*);
         RegisterID* emitNewMethodDefinition(RegisterID* dst, MethodDefinitionNode*);
         RegisterID* emitNewRegExp(RegisterID* dst, RegExp*);
@@ -853,6 +854,7 @@ namespace JSC {
         void emitInstallPrivateBrand(RegisterID* target);
 #if ENABLE(JS_STRUCTS)
         void emitCheckStructReceiver();
+        void emitStructConstructorPrologue();
 #endif
         void emitInstallPrivateClassBrand(RegisterID* target);
 
@@ -1133,9 +1135,16 @@ namespace JSC {
 #if ENABLE(JS_STRUCTS)
         bool isInStructConstructor() const
         {
-            return privateBrandRequirement() == PrivateBrandRequirement::StructConstructor || privateBrandRequirement() == PrivateBrandRequirement::StructInitializer;
+            return isStruct() && (constructorKind() != ConstructorKind::None || m_derivedContextType == DerivedContextType::DerivedConstructorContext);
         }
 #endif
+        bool isStructMethod() const
+        {
+            return isStruct() && constructorKind() == ConstructorKind::None
+                && m_codeBlock->parseMode() != SourceParseMode::ClassFieldInitializerMode
+                && m_derivedContextType != DerivedContextType::DerivedConstructorContext;
+        }
+        bool isStructFieldInitializer() const { return isStruct() && m_codeBlock->parseMode() == SourceParseMode::ClassFieldInitializerMode; }
         bool isDerivedConstructorContext() { return m_derivedContextType == DerivedContextType::DerivedConstructorContext; }
         bool isDerivedClassContext() { return m_derivedContextType == DerivedContextType::DerivedMethodContext; }
         bool isArrowFunction() { return m_codeBlock->isArrowFunction(); }
@@ -1247,10 +1256,11 @@ namespace JSC {
             NeedsClassFieldInitializer needsClassFieldInitializer = metadata->isConstructorAndNeedsClassFieldInitializer() ? NeedsClassFieldInitializer::Yes : NeedsClassFieldInitializer::No;
             PrivateBrandRequirement privateBrandRequirement = metadata->privateBrandRequirement();
             if (SourceParseModeSet(SourceParseMode::ArrowFunctionMode, SourceParseMode::AsyncArrowFunctionMode, SourceParseMode::AsyncArrowFunctionBodyMode).contains(metadata->parseMode())) {
-                if (isDerivedConstructorKind(constructorKind()) || isDerivedConstructorContext()) {
+                if (constructorKind() == ConstructorKind::Extends || isDerivedConstructorContext()) {
                     newDerivedContextType = DerivedContextType::DerivedConstructorContext;
                     needsClassFieldInitializer = m_codeBlock->needsClassFieldInitializer();
                     privateBrandRequirement = m_codeBlock->privateBrandRequirement();
+                    metadata->setIsStruct(isStruct());
                 }
                 else if (m_codeBlock->isClassContext() || isDerivedClassContext())
                     newDerivedContextType = DerivedContextType::DerivedMethodContext;
@@ -1265,7 +1275,7 @@ namespace JSC {
             // https://bugs.webkit.org/show_bug.cgi?id=151547
             SourceParseMode parseMode = metadata->parseMode();
             ConstructAbility constructAbility = constructAbilityForParseMode(parseMode);
-            if (parseMode == SourceParseMode::MethodMode && metadata->constructorKind() != ConstructorKind::None && !isStructInitializer(privateBrandRequirement))
+            if (parseMode == SourceParseMode::MethodMode && metadata->constructorKind() != ConstructorKind::None && !metadata->isStructInitializer())
                 constructAbility = ConstructAbility::CanConstruct;
 
             if (isGeneratorOrAsyncFunctionWrapperParseMode(m_codeBlock->parseMode()) && isGeneratorOrAsyncFunctionBodyParseMode(parseMode))
@@ -1475,6 +1485,7 @@ namespace JSC {
         bool m_needsArguments : 1 { false };
         ECMAMode m_ecmaMode;
         DerivedContextType m_derivedContextType { DerivedContextType::None };
+        bool m_isStructInitializer { false };
 
         struct CatchEntry {
             TryData* tryData;

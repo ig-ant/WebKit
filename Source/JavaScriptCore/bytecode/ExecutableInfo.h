@@ -37,7 +37,7 @@ enum class NeedsClassFieldInitializer : bool { No, Yes };
 // FIXME: These flags, ParserModes and propagation to XXXCodeBlocks should be reorganized.
 // https://bugs.webkit.org/show_bug.cgi?id=151547
 struct ExecutableInfo {
-    ExecutableInfo(bool isConstructor, PrivateBrandRequirement privateBrandRequirement, bool isBuiltinFunction, ConstructorKind constructorKind, JSParserScriptMode scriptMode, SuperBinding superBinding, SourceParseMode parseMode, DerivedContextType derivedContextType, NeedsClassFieldInitializer needsClassFieldInitializer, bool isArrowFunctionContext, bool isClassContext, EvalContextType evalContextType, bool isBuiltinDefaultClassConstructor = false)
+    ExecutableInfo(bool isConstructor, PrivateBrandRequirement privateBrandRequirement, bool isBuiltinFunction, ConstructorKind constructorKind, JSParserScriptMode scriptMode, SuperBinding superBinding, SourceParseMode parseMode, DerivedContextType derivedContextType, NeedsClassFieldInitializer needsClassFieldInitializer, bool isArrowFunctionContext, bool isClassContext, EvalContextType evalContextType, bool isBuiltinDefaultClassConstructor = false, bool isStruct = false)
         : m_isConstructor(isConstructor)
         , m_privateBrandRequirement(static_cast<unsigned>(privateBrandRequirement))
         , m_isBuiltinFunction(isBuiltinFunction)
@@ -51,6 +51,7 @@ struct ExecutableInfo {
         , m_isClassContext(isClassContext)
         , m_evalContextType(static_cast<unsigned>(evalContextType))
         , m_isBuiltinDefaultClassConstructor(isBuiltinDefaultClassConstructor)
+        , m_isStruct(isStruct)
     {
         ASSERT(m_constructorKind == static_cast<unsigned>(constructorKind));
         ASSERT(m_superBinding == static_cast<unsigned>(superBinding));
@@ -70,12 +71,13 @@ struct ExecutableInfo {
     bool isClassContext() const { return m_isClassContext; }
     NeedsClassFieldInitializer needsClassFieldInitializer() const { return static_cast<NeedsClassFieldInitializer>(m_needsClassFieldInitializer); }
     bool isBuiltinDefaultClassConstructor() const { return m_isBuiltinDefaultClassConstructor; }
+    bool isStruct() const { return m_isStruct; }
 
 private:
     unsigned m_isConstructor : 1;
-    unsigned m_privateBrandRequirement : 3;
+    unsigned m_privateBrandRequirement : 1;
     unsigned m_isBuiltinFunction : 1;
-    unsigned m_constructorKind : 3;
+    unsigned m_constructorKind : 2;
     unsigned m_superBinding : 1;
     unsigned m_scriptMode: 1;
     SourceParseMode m_parseMode;
@@ -85,6 +87,7 @@ private:
     unsigned m_isClassContext : 1;
     unsigned m_evalContextType : 2;
     unsigned m_isBuiltinDefaultClassConstructor : 1;
+    unsigned m_isStruct : 1;
 };
 
 } // namespace JSC

@@ -210,7 +210,7 @@ JSValue eval(CallFrame* callFrame, JSValue thisValue, JSScope* callerScopeChain,
 
         DerivedContextType derivedContextType = callerUnlinkedCodeBlock->derivedContextType();
         if (!isArrowFunctionContext && callerUnlinkedCodeBlock->isClassContext()) {
-            derivedContextType = callerUnlinkedCodeBlock->isConstructor() || isStructInitializer(callerUnlinkedCodeBlock->privateBrandRequirement())
+            derivedContextType = callerUnlinkedCodeBlock->isConstructor() || (callerUnlinkedCodeBlock->isStruct() && callerUnlinkedCodeBlock->constructorKind() != ConstructorKind::None)
                 ? DerivedContextType::DerivedConstructorContext
                 : DerivedContextType::DerivedMethodContext;
         }
@@ -221,7 +221,7 @@ JSValue eval(CallFrame* callFrame, JSValue thisValue, JSScope* callerScopeChain,
         else
             evalContextType = EvalContextType::None;
 
-        eval = DirectEvalExecutable::create(globalObject, makeSource(programSource, callerBaselineCodeBlock->source().provider()->sourceOrigin(), sourceTaintedOrigin), lexicallyScopedFeatures, derivedContextType, callerUnlinkedCodeBlock->needsClassFieldInitializer(), callerUnlinkedCodeBlock->privateBrandRequirement(), isArrowFunctionContext, callerBaselineCodeBlock->ownerExecutable()->isInsideOrdinaryFunction(), evalContextType, &variablesUnderTDZ, &privateNameEnvironment);
+        eval = DirectEvalExecutable::create(globalObject, makeSource(programSource, callerBaselineCodeBlock->source().provider()->sourceOrigin(), sourceTaintedOrigin), lexicallyScopedFeatures, derivedContextType, callerUnlinkedCodeBlock->needsClassFieldInitializer(), callerUnlinkedCodeBlock->privateBrandRequirement(), callerUnlinkedCodeBlock->isStruct(), isArrowFunctionContext, callerBaselineCodeBlock->ownerExecutable()->isInsideOrdinaryFunction(), evalContextType, &variablesUnderTDZ, &privateNameEnvironment);
         EXCEPTION_ASSERT(!!scope.exception() == !eval);
         if (!eval) [[unlikely]]
             return { };

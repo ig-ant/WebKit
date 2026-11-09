@@ -210,14 +210,8 @@ ParserError BytecodeGenerator::generate(unsigned& size)
     case ConstructorKind::Naked:
     case ConstructorKind::Base:
     case ConstructorKind::Extends:
-        callingNonCallableConstructor = !isConstructor();
+        callingNonCallableConstructor = !isConstructor() && !m_isStructInitializer;
         break;
-#if ENABLE(JS_STRUCTS)
-    case ConstructorKind::StructBase:
-    case ConstructorKind::StructExtends:
-        callingNonCallableConstructor = !isConstructor() && privateBrandRequirement() != PrivateBrandRequirement::StructInitializer;
-        break;
-#endif
     }
 
     m_codeBlock->setThisRegister(m_thisRegister.virtualRegister());
@@ -472,6 +466,7 @@ BytecodeGenerator::BytecodeGenerator(VM& vm, FunctionNode* functionNode, Unlinke
     , m_needsToUpdateArrowFunctionContext(functionNode->usesArrowFunction() || functionNode->usesEval())
     , m_ecmaMode(ECMAMode::fromBool(functionNode->isStrictMode()))
     , m_derivedContextType(codeBlock->derivedContextType())
+    , m_isStructInitializer(functionNode->isStructInitializer())
 {
     allocateCalleeSaveSpace();
 
@@ -600,17 +595,17 @@ BytecodeGenerator::BytecodeGenerator(VM& vm, FunctionNode* functionNode, Unlinke
             return;
         }
         break;
-#if ENABLE(JS_STRUCTS)
-    case ConstructorKind::StructBase:
-    case ConstructorKind::StructExtends:
-        if (!isConstructor() && privateBrandRequirement() != PrivateBrandRequirement::StructInitializer) {
-            emitThrowTypeError("Cannot call a struct constructor without |new|"_s);
-            return;
-        }
-        break;
-#endif
     case ConstructorKind::Base:
     case ConstructorKind::Extends:
+#if ENABLE(JS_STRUCTS)
+        if (isStruct()) {
+            if (!isConstructor() && !m_isStructInitializer) {
+                emitThrowTypeError("Cannot call a struct constructor without |new|"_s);
+                return;
+            }
+            break;
+        }
+#endif
         if (!isConstructor()) {
             String constructorName = functionNode->ident().string();
             if (!constructorName || constructorName.isEmpty())
@@ -838,7 +833,7 @@ IGNORE_GCC_WARNINGS_END
         m_newTargetRegister = addVar();
 
     // emitCheckStructReceiver() throws unless |this| is already a struct instance.
-    bool checksStructReceiver = isStructMethod(privateBrandRequirement());
+    bool checksStructReceiver = isStructMethod();
 
     auto shouldEmitToThis = [&] {
         if (checksStructReceiver)
@@ -934,6 +929,12 @@ IGNORE_GCC_WARNINGS_END
                 break;
             case ConstructorKind::None:
             case ConstructorKind::Base:
+#if ENABLE(JS_STRUCTS)
+                if (isStruct()) {
+                    emitStructConstructorPrologue();
+                    break;
+                }
+#endif
                 emitCreateThis(&m_thisRegister);
                 if (privateBrandRequirement() == PrivateBrandRequirement::Needed)
                     emitInstallPrivateBrand(&m_thisRegister);
@@ -941,23 +942,14 @@ IGNORE_GCC_WARNINGS_END
                 emitInstanceFieldInitializationIfNeeded(&m_thisRegister, &m_calleeRegister, m_scopeNode->position(), m_scopeNode->position(), m_scopeNode->position());
                 break;
             case ConstructorKind::Extends:
+#if ENABLE(JS_STRUCTS)
+                if (isStruct()) {
+                    emitStructConstructorPrologue();
+                    break;
+                }
+#endif
                 moveEmptyValue(&m_thisRegister);
                 break;
-#if ENABLE(JS_STRUCTS)
-            case ConstructorKind::StructBase:
-            case ConstructorKind::StructExtends: {
-                ASSERT(privateBrandRequirement() == PrivateBrandRequirement::StructConstructor);
-                Ref<Label> newTargetIsCallee = newLabel();
-                emitJumpIfTrue(emitEqualityOp<OpStricteq>(newTemporary(), &m_thisRegister, &m_calleeRegister), newTargetIsCallee.get());
-                emitThrowTypeError("The new target of a struct constructor must be the struct itself"_s);
-                emitLabel(newTargetIsCallee.get());
-                if (m_newTargetRegister)
-                    emitLoad(m_newTargetRegister, jsUndefined());
-                OpCreateStruct::emit(this, &m_thisRegister, &m_calleeRegister);
-                emitInstanceFieldInitializationIfNeeded(&m_thisRegister, &m_calleeRegister, m_scopeNode->position(), m_scopeNode->position(), m_scopeNode->position());
-                break;
-            }
-#endif
             }
         } else {
             switch (constructorKind()) {
@@ -966,15 +958,11 @@ IGNORE_GCC_WARNINGS_END
                     emitToThis();
                 break;
             }
-#if ENABLE(JS_STRUCTS)
-            case ConstructorKind::StructBase:
-            case ConstructorKind::StructExtends:
-                ASSERT(privateBrandRequirement() == PrivateBrandRequirement::StructInitializer);
-                break;
-#endif
-            case ConstructorKind::Naked:
             case ConstructorKind::Base:
             case ConstructorKind::Extends:
+                RELEASE_ASSERT(m_isStructInitializer);
+                break;
+            case ConstructorKind::Naked:
                 RELEASE_ASSERT_NOT_REACHED();
                 break;
             }
@@ -3188,6 +3176,19 @@ void BytecodeGenerator::emitCheckStructReceiver()
     emitExpressionInfo(m_scopeNode->position(), m_scopeNode->position(), m_scopeNode->position());
     emitCheckPrivateBrand(&m_thisRegister, brand.get(), isStatic);
 }
+
+void BytecodeGenerator::emitStructConstructorPrologue()
+{
+    ASSERT(!m_isStructInitializer);
+    Ref<Label> newTargetIsCallee = newLabel();
+    emitJumpIfTrue(emitEqualityOp<OpStricteq>(newTemporary(), &m_thisRegister, &m_calleeRegister), newTargetIsCallee.get());
+    emitThrowTypeError("The new target of a struct constructor must be the struct itself"_s);
+    emitLabel(newTargetIsCallee.get());
+    if (m_newTargetRegister)
+        emitLoad(m_newTargetRegister, jsUndefined());
+    OpCreateStruct::emit(this, &m_thisRegister, &m_calleeRegister);
+    emitInstanceFieldInitializationIfNeeded(&m_thisRegister, &m_calleeRegister, m_scopeNode->position(), m_scopeNode->position(), m_scopeNode->position());
+}
 #endif
 
 void BytecodeGenerator::emitInstallPrivateClassBrand(RegisterID* target)
@@ -3321,7 +3322,7 @@ RegisterID* BytecodeGenerator::emitInstanceFieldInitializationIfNeeded(RegisterI
     RefPtr<RegisterID> initializer = emitDirectGetById(newTemporary(), constructor, propertyNames().builtinNames().instanceFieldInitializerPrivateName());
 
     RefPtr<Label> noInitializer;
-    if (isStructConstructorKind(constructorKind()) && isDerivedConstructorKind(constructorKind())) {
+    if (isStruct() && constructorKind() == ConstructorKind::Extends) {
         noInitializer = newLabel();
         emitJumpIfTrue(emitIsUndefined(newTemporary(), initializer.get()), *noInitializer);
     }
@@ -3725,9 +3726,9 @@ RegisterID* BytecodeGenerator::emitNewMethodDefinition(RegisterID* dst, MethodDe
 }
 
 RegisterID* BytecodeGenerator::emitNewDefaultConstructor(RegisterID* dst, ConstructorKind constructorKind, const Identifier& name,
-    const Identifier& ecmaName, const SourceCode& classSource, NeedsClassFieldInitializer needsClassFieldInitializer, PrivateBrandRequirement privateBrandRequirement)
+    const Identifier& ecmaName, const SourceCode& classSource, NeedsClassFieldInitializer needsClassFieldInitializer, PrivateBrandRequirement privateBrandRequirement, bool isStruct, ConstructAbility constructAbility)
 {
-    UnlinkedFunctionExecutable* executable = m_vm.builtinExecutables()->createDefaultConstructor(constructorKind, name, needsClassFieldInitializer, privateBrandRequirement);
+    UnlinkedFunctionExecutable* executable = m_vm.builtinExecutables()->createDefaultConstructor(constructorKind, name, needsClassFieldInitializer, privateBrandRequirement, isStruct, constructAbility);
     executable->setEcmaName(ecmaName);
     executable->setClassSource(classSource);
 
@@ -3737,7 +3738,7 @@ RegisterID* BytecodeGenerator::emitNewDefaultConstructor(RegisterID* dst, Constr
     return dst;
 }
 
-RegisterID* BytecodeGenerator::emitNewClassFieldInitializerFunction(RegisterID* dst, Vector<UnlinkedFunctionExecutable::ClassElementDefinition>&& classElementDefinitions, bool isDerived, PrivateBrandRequirement privateBrandRequirement)
+RegisterID* BytecodeGenerator::emitNewClassFieldInitializerFunction(RegisterID* dst, Vector<UnlinkedFunctionExecutable::ClassElementDefinition>&& classElementDefinitions, bool isDerived, bool isStruct)
 {
     DerivedContextType newDerivedContextType;
     SuperBinding superBinding;
@@ -3756,7 +3757,8 @@ RegisterID* BytecodeGenerator::emitNewClassFieldInitializerFunction(RegisterID* 
 
     FunctionMetadataNode metadata(parserArena(), JSTokenLocation(), JSTokenLocation(), 0, 0, 0, ImplementationVisibility::Private, StrictModeLexicallyScopedFeature, ConstructorKind::None, superBinding, 0, parseMode, false);
     metadata.finishParsing(m_scopeNode->source(), Identifier(), FunctionMode::MethodDefinition);
-    auto initializer = UnlinkedFunctionExecutable::create(m_vm, m_scopeNode->source(), &metadata, isBuiltinFunction() ? UnlinkedBuiltinFunction : UnlinkedNormalFunction, constructAbility, InlineAttribute::Always, scriptMode(), WTF::move(variablesUnderTDZ), { }, WTF::move(parentPrivateNameEnvironment), newDerivedContextType, EvalContextType::InstanceFieldEvalContext, NeedsClassFieldInitializer::No, privateBrandRequirement);
+    metadata.setIsStruct(isStruct);
+    auto initializer = UnlinkedFunctionExecutable::create(m_vm, m_scopeNode->source(), &metadata, isBuiltinFunction() ? UnlinkedBuiltinFunction : UnlinkedNormalFunction, constructAbility, InlineAttribute::Always, scriptMode(), WTF::move(variablesUnderTDZ), { }, WTF::move(parentPrivateNameEnvironment), newDerivedContextType, EvalContextType::InstanceFieldEvalContext, NeedsClassFieldInitializer::No, PrivateBrandRequirement::None);
     initializer->setClassElementDefinitions(WTF::move(classElementDefinitions));
 
     unsigned index = m_codeBlock->addFunctionExpr(initializer);
@@ -4144,7 +4146,7 @@ void BytecodeGenerator::emitCallDefineProperty(RegisterID* newObj, RegisterID* p
 
 RegisterID* BytecodeGenerator::emitReturn(RegisterID* src)
 {
-    if (isConstructor() && isStructConstructorKind(constructorKind())) {
+    if (isConstructor() && isStruct()) {
         OpRet::emit(this, &m_thisRegister);
         return src;
     }

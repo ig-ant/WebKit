@@ -76,6 +76,7 @@ public:
     bool allowDirectEvalCache() const { return unlinkedCodeBlock()->allowDirectEvalCache(); }
     NeedsClassFieldInitializer needsClassFieldInitializer() const { return static_cast<NeedsClassFieldInitializer>(m_needsClassFieldInitializer); }
     PrivateBrandRequirement privateBrandRequirement() const { return static_cast<PrivateBrandRequirement>(m_privateBrandRequirement); }
+    bool isStruct() const { return m_isStruct; }
     TemplateObjectMap& ensureTemplateObjectMap(VM&);
 
 protected:
@@ -83,10 +84,11 @@ protected:
     friend class ScriptExecutable;
 
     using Base::finishCreation;
-    EvalExecutable(JSGlobalObject*, const SourceCode&, LexicallyScopedFeatures, DerivedContextType, bool isArrowFunctionContext, bool isInsideOrdinaryFunction, EvalContextType, NeedsClassFieldInitializer, PrivateBrandRequirement);
+    EvalExecutable(JSGlobalObject*, const SourceCode&, LexicallyScopedFeatures, DerivedContextType, bool isArrowFunctionContext, bool isInsideOrdinaryFunction, EvalContextType, NeedsClassFieldInitializer, PrivateBrandRequirement, bool isStruct);
 
     unsigned m_needsClassFieldInitializer : 1;
-    unsigned m_privateBrandRequirement : 3;
+    unsigned m_privateBrandRequirement : 1;
+    unsigned m_isStruct : 1;
 
     std::unique_ptr<TemplateObjectMap> m_templateObjectMap;
 };

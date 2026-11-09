@@ -168,6 +168,7 @@ public:
     bool hasTailCalls() const { return m_hasTailCalls; }
     void setHasTailCalls() { m_hasTailCalls = true; }
     bool isBuiltinDefaultClassConstructor() const { return m_isBuiltinDefaultClassConstructor; }
+    bool isStruct() const { return m_isStruct; }
 
     bool hasExpressionInfo() { return !m_expressionInfo->isEmpty(); }
 
@@ -398,7 +399,8 @@ private:
     unsigned m_isArrowFunctionContext : 1;
     unsigned m_isClassContext : 1;
     unsigned m_hasTailCalls : 1;
-    unsigned m_constructorKind : 3;
+    unsigned m_isStruct : 1;
+    unsigned m_constructorKind : 2;
     unsigned m_derivedContextType : 2;
     unsigned m_evalContextType : 2;
     unsigned m_codeType : 2;
@@ -456,7 +458,7 @@ public:
         FixedVector<IdentifierSet> m_constantIdentifierSets;
 
         unsigned m_needsClassFieldInitializer : 1;
-        unsigned m_privateBrandRequirement : 3;
+        unsigned m_privateBrandRequirement : 1;
     };
 
     int outOfLineJumpOffset(JSInstructionStream::Offset);

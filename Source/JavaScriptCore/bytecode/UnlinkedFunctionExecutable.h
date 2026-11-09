@@ -146,6 +146,13 @@ public:
     bool hasCapturedVariables() const { return m_hasCapturedVariables; }
 
     PrivateBrandRequirement privateBrandRequirement() const { return static_cast<PrivateBrandRequirement>(m_privateBrandRequirement); }
+    bool isStruct() const { return m_isStruct; }
+    bool isStructInitializer() const
+    {
+        return isStruct()
+            && (constructorKind() == ConstructorKind::Base || constructorKind() == ConstructorKind::Extends)
+            && constructAbility() == ConstructAbility::CannotConstruct;
+    }
 
     static constexpr DestructionMode needsDestruction = NeedsDestruction;
     static void destroy(JSCell*);
@@ -156,7 +163,7 @@ public:
     JSParserScriptMode scriptMode() const { return static_cast<JSParserScriptMode>(m_scriptMode); }
     bool isClassConstructorFunction() const
     {
-        if (isStructInitializer(privateBrandRequirement()))
+        if (isStructInitializer())
             return false;
         switch (constructorKind()) {
         case ConstructorKind::None:
@@ -164,10 +171,6 @@ public:
             return false;
         case ConstructorKind::Base:
         case ConstructorKind::Extends:
-#if ENABLE(JS_STRUCTS)
-        case ConstructorKind::StructBase:
-        case ConstructorKind::StructExtends:
-#endif
             return true;
         }
         return false;
@@ -303,9 +306,10 @@ private:
     unsigned m_isGeneratedFromCache : 1;
     unsigned m_isBuiltinFunction : 1;
     unsigned m_isBuiltinDefaultClassConstructor : 1;
-    unsigned m_privateBrandRequirement : 3;
+    unsigned m_privateBrandRequirement : 1;
+    unsigned m_isStruct : 1;
     CodeFeatures m_features : bitWidthOfCodeFeatures;
-    uint16_t m_constructorKind : 3;
+    uint16_t m_constructorKind : 2;
     SourceParseMode m_sourceParseMode;
     uint8_t m_implementationVisibility : bitWidthOfImplementationVisibility;
     LexicallyScopedFeatures m_lexicallyScopedFeatures : bitWidthOfLexicallyScopedFeatures;

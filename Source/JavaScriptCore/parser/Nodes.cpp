@@ -356,7 +356,9 @@ void PropertyListNode::markInstanceMethodsAsStructMethods()
         if (!node->isInstanceClassProperty() || node->isInstanceClassField())
             continue;
         ASSERT(node->m_assign->isBaseFuncExprNode());
-        static_cast<BaseFuncExprNode*>(node->m_assign)->metadata()->setPrivateBrandRequirement(PrivateBrandRequirement::StructMethod);
+        auto* metadata = static_cast<BaseFuncExprNode*>(node->m_assign)->metadata();
+        ASSERT(metadata->constructorKind() == ConstructorKind::None);
+        metadata->setIsStruct(true);
     }
 }
 #endif
