@@ -1101,9 +1101,7 @@ namespace JSC {
         , m_constructorExpression(constructorExpression)
         , m_classHeritage(classHeritage)
         , m_classElements(classElements)
-#if ENABLE(JS_STRUCTS)
         , m_isStruct(isStruct)
-#endif
         , m_needsLexicalScope(isStruct || PropertyListNode::shouldCreateLexicalScopeForClass(classElements))
     {
     }

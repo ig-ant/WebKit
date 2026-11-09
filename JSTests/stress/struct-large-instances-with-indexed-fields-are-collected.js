@@ -1,5 +1,4 @@
 //@ skip if $memoryLimited
-//@ skip if !$structsEnabled
 //@ requireOptions("--useStructs=1")
 
 load("./resources/struct-footprint.js", "caller relative");

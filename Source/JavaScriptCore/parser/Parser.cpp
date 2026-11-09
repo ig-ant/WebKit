@@ -3022,7 +3022,6 @@ template <class TreeBuilder> TreeStatement Parser<LexerType>::parseAsyncFunction
     return result;
 }
 
-#if ENABLE(JS_STRUCTS)
 // https://tc39.es/proposal-structs/
 template <typename LexerType>
 template <class TreeBuilder> bool Parser<LexerType>::isStartOfStructDeclaration(TreeBuilder& context, DeclarationDefaultContext declarationDefaultContext)
@@ -3039,7 +3038,6 @@ template <class TreeBuilder> bool Parser<LexerType>::isStartOfStructDeclaration(
     restoreSavePoint(context, savePoint);
     return result;
 }
-#endif
 
 template <typename LexerType>
 template <class TreeBuilder> TreeStatement Parser<LexerType>::parseClassDeclaration(TreeBuilder& context, ExportType exportType, DeclarationDefaultContext declarationDefaultContext)
@@ -3049,9 +3047,7 @@ template <class TreeBuilder> TreeStatement Parser<LexerType>::parseClassDeclarat
     JSTextPosition classStart = tokenStartPosition();
 
     ParserClassInfo<TreeBuilder> info;
-#if ENABLE(JS_STRUCTS)
     info.isStruct = !match(CLASSTOKEN);
-#endif
     FunctionNameRequirements requirements = FunctionNameRequirements::Named;
     if (declarationDefaultContext == DeclarationDefaultContext::ExportDefault) {
         // Under the "export default" context, class declaration does not require the class name.
@@ -3405,10 +3401,8 @@ parseMethod:
         declareHiddenVariable(m_vm.propertyNames->builtinNames().privateClassBrandPrivateName());
     }
 
-#if ENABLE(JS_STRUCTS)
     if (info.isStruct)
         declareHiddenVariable(m_vm.propertyNames->builtinNames().structSuperInitializerPrivateName());
-#endif
 
     if constexpr (std::is_same_v<TreeBuilder, ASTBuilder>) {
         if (classElements)

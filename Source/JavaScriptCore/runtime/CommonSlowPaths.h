@@ -266,9 +266,7 @@ class CallFrame;
 #define JSC_DEFINE_COMMON_SLOW_PATH(name) JSC_DEFINE_JIT_OPERATION(name, UGPRPair, (CallFrame* callFrame, const JSInstruction* pc))
 
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_create_this);
-#if ENABLE(JS_STRUCTS)
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_create_struct);
-#endif
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_enter);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_to_this);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_check_tdz);

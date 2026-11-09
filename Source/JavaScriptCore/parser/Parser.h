@@ -1800,11 +1800,7 @@ private:
     template <class TreeBuilder> TreeStatement parseStatementListItem(TreeBuilder&, const Identifier*& directive, unsigned* directiveLiteralLength);
     template <class TreeBuilder> TreeStatement parseStatement(TreeBuilder&, const Identifier*& directive, unsigned* directiveLiteralLength = nullptr);
     enum class ExportType { Exported, NotExported };
-#if ENABLE(JS_STRUCTS)
     template <class TreeBuilder> bool isStartOfStructDeclaration(TreeBuilder&, DeclarationDefaultContext);
-#else
-    template <class TreeBuilder> static constexpr bool isStartOfStructDeclaration(TreeBuilder&, DeclarationDefaultContext) { return false; }
-#endif
     template <class TreeBuilder> TreeStatement parseClassDeclaration(TreeBuilder&, ExportType = ExportType::NotExported, DeclarationDefaultContext = DeclarationDefaultContext::Standard);
     enum class FunctionDeclarationType { Declaration, Statement };
     template <class TreeBuilder> TreeStatement parseFunctionDeclaration(TreeBuilder&, FunctionDeclarationType = FunctionDeclarationType::Declaration, ExportType = ExportType::NotExported, DeclarationDefaultContext = DeclarationDefaultContext::Standard, std::optional<int> functionConstructorParametersEndPosition = std::nullopt);

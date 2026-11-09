@@ -852,10 +852,8 @@ namespace JSC {
 
         void emitCreatePrivateBrand(const Identifier& description, const JSTextPosition& divot, const JSTextPosition& divotStart, const JSTextPosition& divotEnd);
         void emitInstallPrivateBrand(RegisterID* target);
-#if ENABLE(JS_STRUCTS)
         void emitCheckStructReceiver();
         void emitStructConstructorPrologue();
-#endif
         void emitInstallPrivateClassBrand(RegisterID* target);
 
         RegisterID* emitGetPrivateBrand(RegisterID* dst, RegisterID* scope, bool isStatic);
@@ -1132,12 +1130,10 @@ namespace JSC {
 
         OpcodeID lastOpcodeID() const { return m_lastOpcodeID; }
         
-#if ENABLE(JS_STRUCTS)
         bool isInStructConstructor() const
         {
             return isStruct() && (constructorKind() != ConstructorKind::None || m_derivedContextType == DerivedContextType::DerivedConstructorContext);
         }
-#endif
         bool isStructMethod() const
         {
             return isStruct() && constructorKind() == ConstructorKind::None

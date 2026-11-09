@@ -201,7 +201,6 @@ JSC_DEFINE_COMMON_SLOW_PATH(slow_path_create_this)
     RETURN(result);
 }
 
-#if ENABLE(JS_STRUCTS)
 JSC_DEFINE_COMMON_SLOW_PATH(slow_path_create_struct)
 {
     BEGIN();
@@ -216,7 +215,6 @@ JSC_DEFINE_COMMON_SLOW_PATH(slow_path_create_struct)
 
     RETURN(constructor->createInstance(vm));
 }
-#endif
 
 JSC_DEFINE_COMMON_SLOW_PATH(slow_path_create_promise)
 {

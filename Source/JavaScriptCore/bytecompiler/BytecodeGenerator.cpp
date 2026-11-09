@@ -597,7 +597,6 @@ BytecodeGenerator::BytecodeGenerator(VM& vm, FunctionNode* functionNode, Unlinke
         break;
     case ConstructorKind::Base:
     case ConstructorKind::Extends:
-#if ENABLE(JS_STRUCTS)
         if (isStruct()) {
             if (!isConstructor() && !m_isStructInitializer) {
                 emitThrowTypeError("Cannot call a struct constructor without |new|"_s);
@@ -605,7 +604,6 @@ BytecodeGenerator::BytecodeGenerator(VM& vm, FunctionNode* functionNode, Unlinke
             }
             break;
         }
-#endif
         if (!isConstructor()) {
             String constructorName = functionNode->ident().string();
             if (!constructorName || constructorName.isEmpty())
@@ -929,12 +927,10 @@ IGNORE_GCC_WARNINGS_END
                 break;
             case ConstructorKind::None:
             case ConstructorKind::Base:
-#if ENABLE(JS_STRUCTS)
                 if (isStruct()) {
                     emitStructConstructorPrologue();
                     break;
                 }
-#endif
                 emitCreateThis(&m_thisRegister);
                 if (privateBrandRequirement() == PrivateBrandRequirement::Needed)
                     emitInstallPrivateBrand(&m_thisRegister);
@@ -942,12 +938,10 @@ IGNORE_GCC_WARNINGS_END
                 emitInstanceFieldInitializationIfNeeded(&m_thisRegister, &m_calleeRegister, m_scopeNode->position(), m_scopeNode->position(), m_scopeNode->position());
                 break;
             case ConstructorKind::Extends:
-#if ENABLE(JS_STRUCTS)
                 if (isStruct()) {
                     emitStructConstructorPrologue();
                     break;
                 }
-#endif
                 moveEmptyValue(&m_thisRegister);
                 break;
             }
@@ -971,10 +965,8 @@ IGNORE_GCC_WARNINGS_END
     }
     }
 
-#if ENABLE(JS_STRUCTS)
     if (checksStructReceiver)
         emitCheckStructReceiver();
-#endif
 
     // We need load |super| & |this| for arrow function before initializeDefaultParameterValuesAndSetupFunctionScopeStack
     // if we have default parameter expression. Because |super| & |this| values can be used there
@@ -2147,10 +2139,7 @@ bool BytecodeGenerator::instantiateLexicalVariables(const VariableEnvironment& l
 {
     bool hasCapturedVariables = false;
     {
-        bool hasPrivateNames = lexicalVariables.privateNamesSize();
-#if ENABLE(JS_STRUCTS)
-        hasPrivateNames |= scopeType == ScopeType::ClassScope && lexicalVariables.contains(propertyNames().builtinNames().structSuperInitializerPrivateName().impl());
-#endif
+        bool hasPrivateNames = lexicalVariables.privateNamesSize() || (scopeType == ScopeType::ClassScope && lexicalVariables.contains(propertyNames().builtinNames().structSuperInitializerPrivateName().impl()));
         // We need to ensure that @privateClassBrand and @privateBrand offsets are 0 and 1 respectively.
         // To ensure that, we first define them, and later, we filter them out from lexicalVariables.
         if (scopeType == ScopeType::ClassScope) {
@@ -3163,7 +3152,6 @@ void BytecodeGenerator::emitInstallPrivateBrand(RegisterID* target)
     OpSetPrivateBrand::emit(this, target, privateBrandSymbol);
 }
 
-#if ENABLE(JS_STRUCTS)
 void BytecodeGenerator::emitCheckStructReceiver()
 {
     RefPtr<RegisterID> brandScope = scopeRegister();
@@ -3189,7 +3177,6 @@ void BytecodeGenerator::emitStructConstructorPrologue()
     OpCreateStruct::emit(this, &m_thisRegister, &m_calleeRegister);
     emitInstanceFieldInitializationIfNeeded(&m_thisRegister, &m_calleeRegister, m_scopeNode->position(), m_scopeNode->position(), m_scopeNode->position());
 }
-#endif
 
 void BytecodeGenerator::emitInstallPrivateClassBrand(RegisterID* target)
 {

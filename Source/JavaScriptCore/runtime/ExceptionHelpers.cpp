@@ -380,12 +380,10 @@ JSObject* createRedefinedPrivateNameError(JSGlobalObject* globalObject)
     return createTypeError(globalObject, "Cannot redefine existing private field"_s, defaultSourceAppender, TypeNothing);
 }
 
-JSObject* createPrivateMethodAccessError(JSGlobalObject* globalObject, [[maybe_unused]] Symbol* brand)
+JSObject* createPrivateMethodAccessError(JSGlobalObject* globalObject, Symbol* brand)
 {
-#if ENABLE(JS_STRUCTS)
     if (brand->uid().length())
         return createTypeError(globalObject, makeString("The receiver is not an instance of struct "_s, StringView(&brand->uid())));
-#endif
     return createTypeError(globalObject, "Cannot access private method or acessor"_s, defaultSourceAppender, TypeNothing);
 }
 

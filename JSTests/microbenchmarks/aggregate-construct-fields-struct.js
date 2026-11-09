@@ -1,4 +1,3 @@
-//@ skip if !$structsEnabled
 //@ requireOptions("--useStructs=1")
 if (jscOptions().useStructs) {
     loadString(`

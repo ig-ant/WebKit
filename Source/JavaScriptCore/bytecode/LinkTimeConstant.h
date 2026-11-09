@@ -33,16 +33,6 @@ namespace JSC {
 class CodeBlock;
 class JSGlobalObject;
 
-#if ENABLE(JS_STRUCTS)
-#define JSC_FOREACH_STRUCT_LINK_TIME_CONSTANT(v) \
-    v(structCreateConstructor, nullptr) \
-    v(structSuperInitializer, nullptr) \
-    v(structDefineInstances, nullptr) \
-    v(structSeal, nullptr)
-#else
-#define JSC_FOREACH_STRUCT_LINK_TIME_CONSTANT(v)
-#endif
-
 #define JSC_FOREACH_LINK_TIME_CONSTANTS(v) \
     JSC_FOREACH_BUILTIN_LINK_TIME_CONSTANT(v) \
     v(throwTypeErrorFunction, nullptr) \
@@ -136,7 +126,10 @@ class JSGlobalObject;
     v(hasOwnPropertyFunction, nullptr) \
     v(reflectConstructFunction, nullptr) \
     v(createPrivateSymbol, nullptr) \
-    JSC_FOREACH_STRUCT_LINK_TIME_CONSTANT(v) \
+    v(structCreateConstructor, nullptr) \
+    v(structSuperInitializer, nullptr) \
+    v(structDefineInstances, nullptr) \
+    v(structSeal, nullptr) \
     v(emptyPropertyNameEnumerator, nullptr) \
     v(sentinelString, nullptr) \
     v(arrayFromFastWithoutMapFn, nullptr) \

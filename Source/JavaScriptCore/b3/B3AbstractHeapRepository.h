@@ -41,16 +41,6 @@ namespace JSC::B3 {
     macro(VM_heapState) \
 
 // macro(name, offset, mutability)
-#if ENABLE(JS_STRUCTS)
-#define FOR_EACH_STRUCT_ABSTRACT_FIELD(macro) \
-    macro(JSStructConstructor_instanceAllocator, JSStructConstructor::offsetOfInstanceAllocator(), Mutability::Mutable) \
-    macro(JSStructConstructor_instanceStructureID, JSStructConstructor::offsetOfInstanceStructureID(), Mutability::Mutable) \
-    macro(JSStructConstructor_instanceTypeInfoBlob, JSStructConstructor::offsetOfInstanceTypeInfoBlob(), Mutability::Mutable) \
-    macro(JSStructConstructor_instanceInlineFieldCount, JSStructConstructor::offsetOfInstanceInlineFieldCount(), Mutability::Mutable)
-#else
-#define FOR_EACH_STRUCT_ABSTRACT_FIELD(macro)
-#endif
-
 #define FOR_EACH_ABSTRACT_FIELD(macro) \
     macro(ArrayBuffer_data, ArrayBuffer::offsetOfData(), Mutability::Mutable) \
     macro(ArrayStorage_numValuesInVector, ArrayStorage::numValuesInVectorOffset(), Mutability::Mutable) \
@@ -106,7 +96,10 @@ namespace JSC::B3 {
     macro(JSCell_typeInfoFlags, JSCell::typeInfoFlagsOffset(), Mutability::Mutable) \
     macro(JSCell_typeInfoType, JSCell::typeInfoTypeOffset(), Mutability::Immutable) \
     macro(JSCell_usefulBytes, JSCell::indexingTypeAndMiscOffset(), Mutability::Mutable) \
-    FOR_EACH_STRUCT_ABSTRACT_FIELD(macro) \
+    macro(JSStructConstructor_instanceAllocator, JSStructConstructor::offsetOfInstanceAllocator(), Mutability::Mutable) \
+    macro(JSStructConstructor_instanceStructureID, JSStructConstructor::offsetOfInstanceStructureID(), Mutability::Mutable) \
+    macro(JSStructConstructor_instanceTypeInfoBlob, JSStructConstructor::offsetOfInstanceTypeInfoBlob(), Mutability::Mutable) \
+    macro(JSStructConstructor_instanceInlineFieldCount, JSStructConstructor::offsetOfInstanceInlineFieldCount(), Mutability::Mutable) \
     macro(JSFunction_executableOrRareData, JSFunction::offsetOfExecutableOrRareData(), Mutability::Mutable) \
     macro(JSGlobalObject_regExpGlobalData_cachedResult_lastRegExp, JSGlobalObject::regExpGlobalDataOffset() + RegExpGlobalData::offsetOfCachedResult() + RegExpCachedResult::offsetOfLastRegExp(), Mutability::Mutable) \
     macro(JSGlobalObject_regExpGlobalData_cachedResult_lastInput, JSGlobalObject::regExpGlobalDataOffset() + RegExpGlobalData::offsetOfCachedResult() + RegExpCachedResult::offsetOfLastInput(), Mutability::Mutable) \

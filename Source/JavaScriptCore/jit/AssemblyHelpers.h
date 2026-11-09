@@ -1573,9 +1573,7 @@ public:
         empty.link(this);
     }
 
-#if ENABLE(JS_STRUCTS)
     void emitAllocateStructInstance(VM&, GPRReg resultGPR, GPRReg constructorGPR, GPRReg scratch1GPR, GPRReg scratch2GPR, JumpList& slowPath);
-#endif
 
     void emitInitializeOutOfLineStorage(GPRReg butterflyGPR, unsigned outOfLineCapacity, GPRReg scratchGPR)
     {

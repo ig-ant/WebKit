@@ -1088,7 +1088,6 @@ void AssemblyHelpers::emitAllocate(GPRReg resultGPR, const JITAllocator& allocat
     emitAllocateWithNonNullAllocator(resultGPR, allocator, allocatorGPR, scratchGPR, slowPath, slowAllocationResult);
 }
 
-#if ENABLE(JS_STRUCTS)
 void AssemblyHelpers::emitAllocateStructInstance(VM& vm, GPRReg resultGPR, GPRReg constructorGPR, GPRReg scratch1GPR, GPRReg scratch2GPR, JumpList& slowPath)
 {
     ASSERT(noOverlap(resultGPR, constructorGPR, scratch1GPR, scratch2GPR));
@@ -1110,7 +1109,6 @@ void AssemblyHelpers::emitAllocateStructInstance(VM& vm, GPRReg resultGPR, GPRRe
 
     mutatorFence(vm);
 }
-#endif
 
 void AssemblyHelpers::emitAllocateVariableSized(GPRReg resultGPR, const JITAllocator& allocator, Address subspaceAllocatorsBase, GPRReg allocationSize, GPRReg scratchGPR1, GPRReg scratchGPR2, JumpList& slowPath, SlowAllocationResult slowAllocationResult)
 {

@@ -547,9 +547,7 @@ bool CodeBlock::finishCreation(VM& vm, ScriptExecutable* ownerExecutable, Unlink
 
         LINK(OpPutById)
         LINK(OpCreateThis)
-#if ENABLE(JS_STRUCTS)
         LINK(OpCreateStruct)
-#endif
         LINK(OpCreatePromise)
         LINK(OpCreateGenerator)
 
@@ -1667,11 +1665,9 @@ void CodeBlock::reconcileLLIntInlineCachesAtGCEnd()
         m_metadata->forEach<OpCreateThis>([&](auto& metadata) {
             clearCachedCalleeIfNecessary(metadata, "op_create_this"_s);
         });
-#if ENABLE(JS_STRUCTS)
         m_metadata->forEach<OpCreateStruct>([&](auto& metadata) {
             clearCachedCalleeIfNecessary(metadata, "op_create_struct"_s);
         });
-#endif
         m_metadata->forEach<OpCreatePromise>([&](auto& metadata) {
             clearCachedCalleeIfNecessary(metadata, "op_create_promise"_s);
         });

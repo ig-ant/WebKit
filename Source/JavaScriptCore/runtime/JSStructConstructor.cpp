@@ -26,8 +26,6 @@
 #include "config.h"
 #include "JSStructConstructor.h"
 
-#if ENABLE(JS_STRUCTS)
-
 #include "AllocatorInlines.h"
 #include "BrandedStructure.h"
 #include "BuiltinNames.h"
@@ -264,5 +262,3 @@ JSC_DEFINE_HOST_FUNCTION(structSeal, (JSGlobalObject* globalObject, CallFrame* c
 }
 
 } // namespace JSC
-
-#endif // ENABLE(JS_STRUCTS)

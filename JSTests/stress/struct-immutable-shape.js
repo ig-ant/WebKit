@@ -1,4 +1,3 @@
-//@ skip if !$structsEnabled
 //@ slow!
 //@ requireOptions("--useStructs=1")
 

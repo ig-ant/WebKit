@@ -329,7 +329,6 @@ bool PropertyListNode::hasInstanceFields() const
     return false;
 }
 
-#if ENABLE(JS_STRUCTS)
 bool PropertyListNode::hasInstanceFieldsWithInitializer() const
 {
     for (auto list = this; list; list = list->m_next) {
@@ -361,7 +360,6 @@ void PropertyListNode::markInstanceMethodsAsStructMethods()
         metadata->setIsStruct(true);
     }
 }
-#endif
 
 VariableEnvironmentNode::VariableEnvironmentNode(VariableEnvironment&& lexicalVariables)
     : m_lexicalVariables(WTF::move(lexicalVariables))

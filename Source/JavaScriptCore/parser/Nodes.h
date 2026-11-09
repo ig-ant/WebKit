@@ -775,11 +775,9 @@ namespace JSC {
             return m_node->isInstanceClassField();
         }
         NODELETE bool hasInstanceFields() const;
-#if ENABLE(JS_STRUCTS)
         NODELETE bool hasInstanceFieldsWithInitializer() const;
         Vector<PropertyNode*> instanceFields() const;
         void markInstanceMethodsAsStructMethods();
-#endif
 
         bool isStaticClassField() const
         {
@@ -2422,9 +2420,7 @@ namespace JSC {
     private:
         RegisterID* emitBytecode(BytecodeGenerator&, RegisterID* = nullptr) final;
 
-#if ENABLE(JS_STRUCTS)
         RegisterID* emitStructBytecode(BytecodeGenerator&, RegisterID* dst, RegisterID* superclass);
-#endif
 
         bool isClassExprNode() const final { return true; }
 
@@ -2435,9 +2431,7 @@ namespace JSC {
         ExpressionNode* m_constructorExpression;
         ExpressionNode* m_classHeritage;
         PropertyListNode* m_classElements;
-#if ENABLE(JS_STRUCTS)
         bool m_isStruct;
-#endif
         bool m_needsLexicalScope;
     };
 

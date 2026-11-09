@@ -372,9 +372,7 @@ namespace JSC {
         void emit_op_construct(const JSInstruction*);
         void emit_op_super_construct(const JSInstruction*);
         void emit_op_create_this(const JSInstruction*);
-#if ENABLE(JS_STRUCTS)
         void emit_op_create_struct(const JSInstruction*);
-#endif
         void emit_op_to_this(const JSInstruction*);
         void emit_op_get_argument(const JSInstruction*);
         void emit_op_argument_count(const JSInstruction*);

@@ -46,12 +46,10 @@ DirectEvalExecutable* DirectEvalExecutable::create(JSGlobalObject* globalObject,
         return nullptr;
     }
 
-#if ENABLE(JS_STRUCTS)
     if (derivedContextType != DerivedContextType::DerivedConstructorContext) {
         needsClassFieldInitializer = NeedsClassFieldInitializer::No;
         isStruct = false;
     }
-#endif
 
     auto* executable = new (NotNull, allocateCell<DirectEvalExecutable>(vm)) DirectEvalExecutable(globalObject, source, lexicallyScopedFeatures, derivedContextType, needsClassFieldInitializer, privateBrandRequirement, isStruct, isArrowFunctionContext, isInsideOrdinaryFunction, evalContextType);
     executable->finishCreation(vm);

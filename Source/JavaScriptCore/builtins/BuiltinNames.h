@@ -44,16 +44,6 @@ namespace JSC {
     JSC::Identifier name##PrivateName() const { return JSC::Identifier::fromUid(*std::bit_cast<SymbolImpl*>(&JSC::Symbols::name##PrivateName)); }
 
 
-#if ENABLE(JS_STRUCTS)
-#define JSC_STRUCT_PRIVATE_IDENTIFIERS_EACH_PROPERTY_NAME(macro) \
-    macro(structCreateConstructor) \
-    macro(structSuperInitializer) \
-    macro(structDefineInstances) \
-    macro(structSeal)
-#else
-#define JSC_STRUCT_PRIVATE_IDENTIFIERS_EACH_PROPERTY_NAME(macro)
-#endif
-
 #define JSC_COMMON_PRIVATE_IDENTIFIERS_EACH_PROPERTY_NAME(macro) \
     JSC_COMMON_BYTECODE_INTRINSIC_FUNCTIONS_EACH_NAME(macro) \
     JSC_COMMON_BYTECODE_INTRINSIC_CONSTANTS_EACH_NAME(macro) \
@@ -203,7 +193,10 @@ namespace JSC {
     macro(hasOwnPropertyFunction) \
     macro(reflectConstructFunction) \
     macro(createPrivateSymbol) \
-    JSC_STRUCT_PRIVATE_IDENTIFIERS_EACH_PROPERTY_NAME(macro) \
+    macro(structCreateConstructor) \
+    macro(structSuperInitializer) \
+    macro(structDefineInstances) \
+    macro(structSeal) \
     macro(entries) \
     macro(emptyPropertyNameEnumerator) \
     macro(sentinelString) \

@@ -1054,11 +1054,12 @@ void JSGlobalObject::init(VM& vm)
     };
     initFunctionStructures(m_builtinFunctions);
     initFunctionStructures(m_ordinaryFunctions);
-#if ENABLE(JS_STRUCTS)
-    m_structConstructorStructure.set(vm, this, JSStructConstructor::createStructure(vm, this, m_functionPrototype.get()));
-#endif
     m_boundFunctionStructure.set(vm, this, JSBoundFunction::createStructure(vm, this, m_functionPrototype.get()));
 
+    m_structConstructorStructure.initLater(
+        [] (const Initializer<Structure>& init) {
+            init.set(JSStructConstructor::createStructure(init.vm, init.owner, init.owner->m_functionPrototype.get()));
+        });
     m_customGetterFunctionStructure.initLater(
         [] (const Initializer<Structure>& init) {
             init.set(JSCustomGetterFunction::createStructure(init.vm, init.owner, init.owner->m_functionPrototype.get()));
@@ -2096,7 +2097,6 @@ capitalName ## Constructor* lowerName ## Constructor = featureFlag ? capitalName
             init.set(JSFunction::create(init.vm, init.owner, 1, "createPrivateSymbol"_s, createPrivateSymbol, ImplementationVisibility::Private));
         });
 
-#if ENABLE(JS_STRUCTS)
     // Structs
     m_linkTimeConstants[static_cast<unsigned>(LinkTimeConstant::structCreateConstructor)].initLater([] (const Initializer<JSCell>& init) {
             init.set(JSFunction::create(init.vm, init.owner, 4, "structCreateConstructor"_s, structCreateConstructor, ImplementationVisibility::Private));
@@ -2110,7 +2110,6 @@ capitalName ## Constructor* lowerName ## Constructor = featureFlag ? capitalName
     m_linkTimeConstants[static_cast<unsigned>(LinkTimeConstant::structSeal)].initLater([] (const Initializer<JSCell>& init) {
             init.set(JSFunction::create(init.vm, init.owner, 2, "structSeal"_s, structSeal, ImplementationVisibility::Private));
         });
-#endif
 
     // JSON helpers
     m_linkTimeConstants[static_cast<unsigned>(LinkTimeConstant::jsonParse)].initLater([] (const Initializer<JSCell>& init) {
@@ -3036,11 +3035,9 @@ void JSGlobalObject::visitChildrenImpl(JSCell* cell, Visitor& visitor)
     visitFunctionStructures(thisObject->m_builtinFunctions);
     visitFunctionStructures(thisObject->m_ordinaryFunctions);
     visitor.append(thisObject->m_boundFunctionStructure);
-#if ENABLE(JS_STRUCTS)
-    visitor.append(thisObject->m_structConstructorStructure);
-#endif
     visitor.append(thisObject->m_trustedScriptStructure);
 
+    thisObject->m_structConstructorStructure.visit(visitor);
     thisObject->m_customGetterFunctionStructure.visit(visitor);
     thisObject->m_customSetterFunctionStructure.visit(visitor);
     thisObject->m_nativeStdFunctionStructure.visit(visitor);

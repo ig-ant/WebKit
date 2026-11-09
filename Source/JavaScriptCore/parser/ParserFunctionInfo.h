@@ -44,11 +44,7 @@ struct ParserClassInfo {
     const Identifier* className { nullptr };
     unsigned startOffset { 0 };
     unsigned endOffset { 0 };
-#if ENABLE(JS_STRUCTS)
     bool isStruct { false };
-#else
-    static constexpr bool isStruct { false };
-#endif
 };
 
 }

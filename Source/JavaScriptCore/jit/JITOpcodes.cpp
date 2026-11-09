@@ -1529,7 +1529,6 @@ void JIT::emit_op_create_this(const JSInstruction* currentInstruction)
     emitPutVirtualRegister(bytecode.m_dst, resultReg);
 }
 
-#if ENABLE(JS_STRUCTS)
 void JIT::emit_op_create_struct(const JSInstruction* currentInstruction)
 {
     auto bytecode = currentInstruction->as<OpCreateStruct>();
@@ -1549,7 +1548,6 @@ void JIT::emit_op_create_struct(const JSInstruction* currentInstruction)
     addSlowCase(slowCases);
     emitPutVirtualRegister(bytecode.m_dst, resultReg);
 }
-#endif
 
 void JIT::emit_op_check_tdz(const JSInstruction* currentInstruction)
 {
